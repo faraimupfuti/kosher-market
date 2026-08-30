@@ -28,6 +28,7 @@ use App\Http\Controllers\EscrowController;
 use App\Http\Controllers\SiteSettingsController;
 use App\Http\Controllers\Vendor\BitcoinPayoutController;
 use App\Http\Controllers\Vendor\BitcoinPayoutVerificationController;
+use App\Http\Controllers\Vendor\ShippingController;
 use App\Http\Controllers\VendorRegistrationFeeController;
 use App\Http\Controllers\VendorProfileController;
 use Illuminate\Support\Facades\Route;
@@ -104,7 +105,7 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::get('escrow', [AdminEscrowController::class, 'index'])->name('escrow.index');
     Route::post('escrow/{escrow}/release', [AdminEscrowController::class, 'release'])->name('escrow.release');
     Route::post('escrow/{escrow}/refund', [AdminEscrowController::class, 'refund'])->name('escrow.refund');
-    Route::post('escrow/disputes/{dispute}/resolve', [AdminEscrowController::class, 'resolveDispute'])->name('escrow.disputes.resolve');
+    Route::post('escrow/disputes/{dispute}/resolve', [AdminEscrowController::class, 'resolveDispute'])->name('admin.escrow.disputes.resolve');
     Route::get('bitcoin/settlements', [BitcoinSettlementController::class, 'index'])->name('bitcoin.settlements.index');
     Route::post('bitcoin/vendors/{vendor}/verify', [BitcoinSettlementController::class, 'verifyVendor'])->name('bitcoin.vendors.verify');
     Route::post('bitcoin/settlements/{settlement}/destination', [BitcoinSettlementController::class, 'destination'])->name('bitcoin.settlements.destination');
@@ -115,6 +116,11 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
 
 Route::middleware('auth:vendor')->prefix('vendor')->name('vendor.')->group(function () {
     Route::get('/registration-fee', [VendorRegistrationFeeController::class, 'show'])->name('registration-fee');
+    Route::get('/shipping', [ShippingController::class, 'index'])->name('shipping');
+    Route::post('/shipping/zones', [ShippingController::class, 'storeZone'])->name('shipping.zones.store');
+    Route::post('/shipping/rates', [ShippingController::class, 'storeRate'])->name('shipping.rates.store');
+    Route::delete('/shipping/zones/{zone}', [ShippingController::class, 'destroyZone'])->name('shipping.zones.destroy');
+    Route::delete('/shipping/rates/{rate}', [ShippingController::class, 'destroyRate'])->name('shipping.rates.destroy');
     Route::get('/bitcoin/payout-address', [BitcoinPayoutController::class, 'edit'])->name('bitcoin.payout.edit');
     Route::put('/bitcoin/payout-address', [BitcoinPayoutController::class, 'update'])->name('bitcoin.payout.update');
     Route::get('/bitcoin/payouts', [BitcoinPayoutController::class, 'index'])->name('bitcoin.payouts');
