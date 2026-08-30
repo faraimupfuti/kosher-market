@@ -22,8 +22,8 @@ use App\Http\Controllers\Admin\ProfileController;
 use App\Http\Controllers\Admin\RefundController;
 use App\Http\Controllers\Admin\SocialMediaLinkController;
 use App\Http\Controllers\Admin\VendorController;
+use App\Http\Controllers\BitcoinCheckoutController;
 use App\Http\Controllers\EscrowController;
-use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\SiteSettingsController;
 use Illuminate\Support\Facades\Route;
 
@@ -96,7 +96,6 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::resource('payment_gateway_configs', PaymentGatewayConfigController::class)->except(['show']);
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-
     Route::get('escrow', [AdminEscrowController::class, 'index'])->name('escrow.index');
     Route::post('escrow/{escrow}/release', [AdminEscrowController::class, 'release'])->name('escrow.release');
     Route::post('escrow/{escrow}/refund', [AdminEscrowController::class, 'refund'])->name('escrow.refund');
@@ -113,8 +112,10 @@ Route::middleware('auth:customer')->prefix('escrow')->name('escrow.')->group(fun
 
 Route::post('/bitcoin/btcpay/webhook', [EscrowController::class, 'webhook'])->name('bitcoin.btcpay.webhook');
 
-Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
-Route::post('/checkout/process', [CheckoutController::class, 'process'])->name('checkout.process');
+Route::middleware('auth:customer')->group(function () {
+    Route::get('/checkout', [BitcoinCheckoutController::class, 'index'])->name('checkout.index');
+    Route::post('/checkout/process', [BitcoinCheckoutController::class, 'process'])->name('checkout.process');
+});
 
 Route::get('site-settings', [SiteSettingsController::class, 'index'])->name('site-settings.index');
 Route::get('site-settings/edit', [SiteSettingsController::class, 'edit'])->name('admin.site-settings.edit');
