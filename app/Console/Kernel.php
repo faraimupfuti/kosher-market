@@ -13,11 +13,13 @@ class Kernel extends ConsoleKernel
         Velstore::class,
         DataImport::class,
         Commands\ReleaseEligibleEscrow::class,
+        Commands\SyncBitcoinSettlements::class,
     ];
 
     protected function schedule(Schedule $schedule): void
     {
         $schedule->command('escrow:release-eligible')->hourly()->withoutOverlapping();
+        $schedule->command('bitcoin:settlements-sync')->everyFiveMinutes()->withoutOverlapping();
     }
 
     protected function commands(): void
