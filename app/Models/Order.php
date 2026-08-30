@@ -35,4 +35,10 @@ class Order extends Model
     public function escrow() { return $this->hasOne(EscrowTransaction::class); }
     public function shippingRate() { return $this->belongsTo(VendorShippingRate::class, 'shipping_rate_id'); }
     public function shippingCountry() { return $this->belongsTo(Country::class, 'shipping_country', 'code'); }
+
+    public function getTrackingUrlAttribute(): ?string
+    {
+        if (!$this->tracking_number || !$this->shippingRate?->tracking_url_template) return null;
+        return str_replace('{tracking_number}', rawurlencode($this->tracking_number), $this->shippingRate->tracking_url_template);
+    }
 }
