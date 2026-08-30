@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Vendor;
 
 use App\Http\Controllers\Controller;
-use App\Models\EscrowTransaction;
+use App\Models\BitcoinSettlement;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -19,7 +19,7 @@ class BitcoinPayoutController extends Controller
     {
         $vendor = Auth::guard('vendor')->user();
         $data = $request->validate([
-            'bitcoin_payout_address' => ['required', 'string', 'max:120', 'regex:/^(bc1|[13])[a-zA-HJ-NP-Z0-9]{20,110}$/'],
+            'bitcoin_payout_address' => ['required', 'string', 'max:120', 'regex:/^(bc1[ac-hj-np-z02-9]{11,87}|[13][a-km-zA-HJ-NP-Z1-9]{25,34})$/'],
         ]);
 
         $vendor->update([
@@ -33,11 +33,10 @@ class BitcoinPayoutController extends Controller
     public function index()
     {
         $vendorId = Auth::guard('vendor')->id();
-        $payouts = EscrowTransaction::with('order')
+        $payouts = BitcoinSettlement::with('escrow.order')
             ->where('vendor_id', $vendorId)
-            ->whereIn('status', ['released', 'paid'])
-            ->whereHas('ledgerEntries', fn ($q) => $q->where('type', 'seller_payout_due'))
-            ->latest('released_at')
+            ->where('type', 'seller_payout')
+            ->latest()
             ->paginate(20);
 
         return view('vendor.bitcoin.payouts', compact('payouts'));
