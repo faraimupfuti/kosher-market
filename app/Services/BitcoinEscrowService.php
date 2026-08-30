@@ -12,39 +12,29 @@ use RuntimeException;
 
 class BitcoinEscrowService
 {
-    private const SATOSHIS_PER_BTC = 100000000;
     private const MAX_BTC_SATOSHIS = 2100000000000000;
 
     private function btcToSatoshis(string|int|float $amount): int
     {
         $value = is_float($amount) || is_int($amount) ? number_format((float) $amount, 8, '.', '') : trim($amount);
-        if (!preg_match('/^\d+(?:\.\d{1,8})?$/', $value)) throw new RuntimeException('Invalid BTC amount.');
-        [$whole, $fraction] = array_pad(explode('.', $value, 2), 2, '');
-        $fraction = str_pad($fraction, 8, '0');
-        $satoshis = ((int) $whole * self::SATOSHIS_PER_BTC) + (int) $fraction;
-        if ($satoshis < 0 || $satoshis > self::MAX_BTC_SATOSHIS) throw new RuntimeException('Invalid BTC amount.');
+        $satoshis = BitcoinAmount::toSatoshis($value);
+        if ($satoshis > self::MAX_BTC_SATOSHIS) throw new RuntimeException('Invalid BTC amount.');
         return $satoshis;
     }
 
     private function satoshisToBtc(int $satoshis): string
     {
-        $whole = intdiv($satoshis, self::SATOSHIS_PER_BTC);
-        $fraction = $satoshis % self::SATOSHIS_PER_BTC;
-        return sprintf('%d.%08d', $whole, $fraction);
+        return BitcoinAmount::fromSatoshis($satoshis);
     }
 
     private function normalizeBtcAmount(string|int|float $amount): string
     {
-        return is_float($amount) || is_int($amount) ? number_format((float) $amount, 8, '.', '') : trim($amount);
+        return $this->satoshisToBtc($this->btcToSatoshis($amount));
     }
 
-    private function feeBasisPoints(): int
+    private function feeSatoshis(int $satoshis): int
     {
-        $rate = $this->normalizeBtcAmount((string) config('escrow.platform_fee_percent', '2.5'));
-        if (!preg_match('/^\d+(?:\.\d{1,2})?$/', $rate)) return 250;
-        [$whole, $fraction] = array_pad(explode('.', $rate, 2), 2, '');
-        $bps = ((int) $whole * 100) + (int) str_pad(substr($fraction, 0, 2), 2, '0');
-        return max(0, min(10000, $bps));
+        return BitcoinAmount::percentOf($satoshis, (string) config('escrow.platform_fee_percent', '3.00'));
     }
 
     public function createForOrder(Order $order): EscrowTransaction
@@ -54,10 +44,9 @@ class BitcoinEscrowService
         $buyerId = $order->customer?->id;
         if (!$vendorId || !$buyerId) throw new RuntimeException('The order must have a customer and vendor.');
         if (strtoupper((string) ($order->currency ?? '')) !== 'BTC') throw new RuntimeException('Kosher Market accepts Bitcoin only.');
-        $amount = $this->normalizeBtcAmount($order->total_price);
-        $satoshis = $this->btcToSatoshis($amount);
-        if ($satoshis <= 0 || $satoshis > self::MAX_BTC_SATOSHIS) throw new RuntimeException('Invalid BTC escrow amount.');
-        $feeSatoshis = intdiv($satoshis * $this->feeBasisPoints(), 10000);
+        $satoshis = $this->btcToSatoshis($order->total_price);
+        if ($satoshis <= 0) throw new RuntimeException('Invalid BTC escrow amount.');
+        $feeSatoshis = $this->feeSatoshis($satoshis);
         $sellerSatoshis = $satoshis - $feeSatoshis;
         return DB::transaction(fn () => EscrowTransaction::firstOrCreate(['order_id' => $order->id], [
             'payment_id' => null, 'buyer_id' => $buyerId, 'vendor_id' => $vendorId,
@@ -75,7 +64,7 @@ class BitcoinEscrowService
             $existing = Http::timeout(20)->withToken($apiKey)->acceptJson()->get($baseUrl.'/api/v1/stores/'.$storeId.'/invoices/'.$escrow->btcpay_invoice_id);
             if ($existing->successful()) return $existing->json();
         }
-        $response = Http::timeout(20)->withToken($apiKey)->acceptJson()->post($baseUrl.'/api/v1/stores/'.$storeId.'/invoices', ['amount' => $this->normalizeBtcAmount($escrow->amount), 'currency' => 'BTC', 'metadata' => ['orderId' => (string) $escrow->order_id, 'escrowId' => (string) $escrow->id]]);
+        $response = Http::timeout(20)->withToken($apiKey)->acceptJson()->post($baseUrl.'/api/v1/stores/'.$storeId.'/invoices', ['amount' => $this->normalizeBtcAmount($escrow->amount), 'currency' => 'BTC', 'metadata' => ['orderId' => (string) $escrow->order_id, 'escrowId' => (string) $escrow->id, 'platform' => 'kosher-market']]);
         if ($response->failed()) throw new RuntimeException('BTCPay invoice creation failed.');
         $invoice = $response->json();
         $escrow->update(['btcpay_invoice_id' => $invoice['id'] ?? null, 'bitcoin_payment_address' => data_get($invoice, 'addresses.BTC')]);
@@ -85,14 +74,14 @@ class BitcoinEscrowService
     public function markFunded(EscrowTransaction $escrow, string $txid, int $confirmations, string|int|float $btcAmount): EscrowTransaction
     {
         if ($confirmations < (int) config('bitcoin.required_confirmations', 1)) return $escrow;
-        $amount = $this->normalizeBtcAmount($btcAmount);
-        $paymentSatoshis = $this->btcToSatoshis($amount);
-        $escrowSatoshis = $this->btcToSatoshis($this->normalizeBtcAmount($escrow->amount));
-        if ($paymentSatoshis < $escrowSatoshis) throw new RuntimeException('Bitcoin payment is below the escrow amount.');
-        return DB::transaction(function () use ($escrow, $txid, $confirmations, $amount) {
+        $paymentSatoshis = $this->btcToSatoshis($btcAmount);
+        $escrowSatoshis = $this->btcToSatoshis($escrow->amount);
+        if ($paymentSatoshis !== $escrowSatoshis) throw new RuntimeException('Bitcoin payment amount does not exactly match the escrow invoice amount.');
+        return DB::transaction(function () use ($escrow, $txid, $confirmations, $btcAmount) {
             $escrow = EscrowTransaction::whereKey($escrow->id)->lockForUpdate()->firstOrFail();
             if (in_array($escrow->status, ['released', 'paid', 'refund_pending', 'refunded', 'cancelled'], true)) return $escrow;
             if ($escrow->bitcoin_txid && !hash_equals($escrow->bitcoin_txid, $txid)) throw new RuntimeException('Escrow already has a different transaction.');
+            $amount = $this->normalizeBtcAmount($btcAmount);
             $escrow->update(['status' => 'funded', 'bitcoin_txid' => $txid, 'bitcoin_amount' => $amount, 'bitcoin_confirmations' => $confirmations, 'payment_detected_at' => $escrow->payment_detected_at ?: now(), 'payment_confirmed_at' => now(), 'funded_at' => $escrow->funded_at ?: now(), 'release_due_at' => $escrow->release_due_at ?: now()->addDays((int) config('escrow.hold_days', 3))]);
             if (!$escrow->ledgerEntries()->where('reference', $txid)->exists()) EscrowLedgerEntry::create(['escrow_transaction_id' => $escrow->id, 'type' => 'escrow_funded', 'amount' => $amount, 'currency' => 'BTC', 'reference' => $txid, 'metadata' => ['confirmations' => $confirmations]]);
             return $escrow;
@@ -128,8 +117,7 @@ class BitcoinEscrowService
     private function normalizePayoutState(?string $state): string
     {
         return match (strtolower(str_replace(['-', ' '], '_', (string) $state))) {
-            'awaitingapproval', 'awaiting_approval' => 'awaiting_approval', 'awaitingpayment', 'awaiting_payment' => 'awaiting_payment',
-            'inprogress', 'in_progress' => 'in_progress', 'completed' => 'completed', 'cancelled', 'canceled' => 'cancelled', default => 'pending',
+            'awaitingapproval', 'awaiting_approval' => 'awaiting_approval', 'awaitingpayment', 'awaiting_payment' => 'awaiting_payment', 'inprogress', 'in_progress' => 'in_progress', 'completed' => 'completed', 'cancelled', 'canceled' => 'cancelled', default => 'pending',
         };
     }
 
