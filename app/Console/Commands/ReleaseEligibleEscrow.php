@@ -14,6 +14,11 @@ class ReleaseEligibleEscrow extends Command
 
     public function handle(BitcoinEscrowService $service): int
     {
+        if (!config('escrow.auto_release', true) && !$this->option('dry-run')) {
+            $this->warn('Automatic escrow release is disabled by ESCROW_AUTO_RELEASE.');
+            return self::SUCCESS;
+        }
+
         $query = EscrowTransaction::where('status', 'funded')
             ->whereNotNull('release_due_at')
             ->where('release_due_at', '<=', now());
@@ -29,7 +34,7 @@ class ReleaseEligibleEscrow extends Command
 
                 try {
                     $service->release($escrow, 'Automatic release after escrow holding period.');
-                    $this->info("Released escrow #{$escrow->id}; payout recorded as due.");
+                    $this->info("Released escrow #{$escrow->id}; Bitcoin payout queued.");
                     $count++;
                 } catch (Throwable $e) {
                     $this->error("Escrow #{$escrow->id}: {$e->getMessage()}");
