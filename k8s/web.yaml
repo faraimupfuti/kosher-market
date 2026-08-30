@@ -22,6 +22,7 @@ spec:
         - name: web
           image: ghcr.io/faraimupfuti/kosher-market:latest
           imagePullPolicy: Always
+          command: ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
           ports:
             - containerPort: 8000
           envFrom:
