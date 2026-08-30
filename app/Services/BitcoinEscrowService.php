@@ -14,12 +14,15 @@ class BitcoinEscrowService
     public function createForOrder(Order $order): EscrowTransaction
     {
         $order->loadMissing(['product', 'customer']);
-
         $vendorId = $order->product?->vendor_id;
         $buyerId = $order->customer?->id;
-
         if (!$vendorId || !$buyerId) {
             throw new RuntimeException('The order must have a customer and a vendor before escrow can be created.');
+        }
+
+        // Bitcoin-only: order totals must already be denominated in BTC.
+        if (strtoupper((string) ($order->currency ?? 'BTC')) !== 'BTC') {
+            throw new RuntimeException('Velstore is Bitcoin-only. The order currency must be BTC.');
         }
 
         $amount = (float) $order->total_price;
@@ -48,55 +51,48 @@ class BitcoinEscrowService
         });
     }
 
-    /**
-     * Creates a BTCPay Server invoice. BTC is the only settlement currency.
-     * Set BTCPAY_URL, BTCPAY_STORE_ID and BTCPAY_API_KEY in the environment.
-     */
     public function createBitcoinInvoice(EscrowTransaction $escrow): array
     {
         $baseUrl = rtrim((string) config('bitcoin.btcpay_url'), '/');
         $storeId = config('bitcoin.btcpay_store_id');
         $apiKey = config('bitcoin.btcpay_api_key');
-
         if (!$baseUrl || !$storeId || !$apiKey) {
             throw new RuntimeException('BTCPay Server is not configured.');
         }
 
-        $response = Http::withToken($apiKey)
-            ->acceptJson()
-            ->post($baseUrl.'/api/v1/stores/'.$storeId.'/invoices', [
-                'amount' => (string) $escrow->amount,
+        $response = Http::withToken($apiKey)->acceptJson()->post(
+            $baseUrl.'/api/v1/stores/'.$storeId.'/invoices',
+            [
+                'amount' => number_format((float) $escrow->amount, 8, '.', ''),
                 'currency' => 'BTC',
                 'metadata' => [
                     'orderId' => (string) $escrow->order_id,
                     'escrowId' => (string) $escrow->id,
                 ],
-            ]);
+            ]
+        );
 
         if ($response->failed()) {
             throw new RuntimeException('BTCPay invoice creation failed: '.$response->body());
         }
 
         $invoice = $response->json();
-
         $escrow->update([
+            'btcpay_invoice_id' => $invoice['id'] ?? null,
             'bitcoin_payment_address' => data_get($invoice, 'addresses.BTC'),
-            'status' => 'pending',
         ]);
-
         return $invoice;
     }
 
     public function markFunded(EscrowTransaction $escrow, string $txid, int $confirmations, float $btcAmount): EscrowTransaction
     {
-        if ($confirmations < (int) config('bitcoin.required_confirmations', 1)) {
-            return $escrow;
-        }
+        if ($confirmations < (int) config('bitcoin.required_confirmations', 1)) return $escrow;
 
         return DB::transaction(function () use ($escrow, $txid, $confirmations, $btcAmount) {
             $escrow->refresh();
-            if (in_array($escrow->status, ['released', 'refunded', 'cancelled'], true)) {
-                return $escrow;
+            if (in_array($escrow->status, ['released', 'refunded', 'cancelled'], true)) return $escrow;
+            if ($btcAmount + 0.00000001 < (float) $escrow->amount) {
+                throw new RuntimeException('Bitcoin payment amount is below the escrow amount.');
             }
 
             $escrow->update([
@@ -112,14 +108,12 @@ class BitcoinEscrowService
 
             EscrowLedgerEntry::create([
                 'escrow_transaction_id' => $escrow->id,
-                'user_id' => null,
                 'type' => 'escrow_funded',
                 'amount' => $btcAmount,
                 'currency' => 'BTC',
                 'reference' => $txid,
                 'metadata' => ['confirmations' => $confirmations],
             ]);
-
             return $escrow;
         });
     }
@@ -128,25 +122,15 @@ class BitcoinEscrowService
     {
         return DB::transaction(function () use ($escrow, $note) {
             $escrow->refresh();
-            if ($escrow->status !== 'funded') {
-                throw new RuntimeException('Only funded escrow transactions can be released.');
-            }
-
-            $escrow->update([
-                'status' => 'released',
-                'released_at' => now(),
-                'release_note' => $note,
-            ]);
-
+            if ($escrow->status !== 'funded') throw new RuntimeException('Only funded escrow transactions can be released.');
+            $escrow->update(['status' => 'released', 'released_at' => now(), 'release_note' => $note]);
             EscrowLedgerEntry::create([
                 'escrow_transaction_id' => $escrow->id,
-                'user_id' => $escrow->vendor_id,
                 'type' => 'seller_payout_due',
                 'amount' => $escrow->seller_amount,
                 'currency' => 'BTC',
                 'reference' => 'ESCROW-'.$escrow->id,
             ]);
-
             return $escrow;
         });
     }
@@ -155,25 +139,15 @@ class BitcoinEscrowService
     {
         return DB::transaction(function () use ($escrow, $note) {
             $escrow->refresh();
-            if (!in_array($escrow->status, ['funded', 'disputed'], true)) {
-                throw new RuntimeException('Only funded or disputed escrow transactions can be refunded.');
-            }
-
-            $escrow->update([
-                'status' => 'refunded',
-                'refunded_at' => now(),
-                'refund_note' => $note,
-            ]);
-
+            if (!in_array($escrow->status, ['funded', 'disputed'], true)) throw new RuntimeException('Only funded or disputed escrow transactions can be refunded.');
+            $escrow->update(['status' => 'refunded', 'refunded_at' => now(), 'refund_note' => $note]);
             EscrowLedgerEntry::create([
                 'escrow_transaction_id' => $escrow->id,
-                'user_id' => $escrow->buyer_id,
                 'type' => 'buyer_refund_due',
                 'amount' => $escrow->bitcoin_amount ?? $escrow->amount,
                 'currency' => 'BTC',
                 'reference' => 'REFUND-'.$escrow->id,
             ]);
-
             return $escrow;
         });
     }
