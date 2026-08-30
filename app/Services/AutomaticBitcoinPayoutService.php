@@ -20,11 +20,27 @@ class AutomaticBitcoinPayoutService
             throw new RuntimeException('Automatic Bitcoin payouts are disabled.');
         }
 
+        $vendor = $escrow->order?->vendor;
+        if (!$vendor) {
+            throw new RuntimeException('Seller payout cannot proceed: vendor was not found.');
+        }
+
+        if (!$vendor->bitcoin_payout_address || !$vendor->bitcoin_payout_address_verified_at) {
+            throw new RuntimeException('Seller payout cannot proceed until the vendor has a verified Bitcoin payout address.');
+        }
+
         $settlement = BitcoinSettlement::where('escrow_transaction_id', $escrow->id)
             ->where('type', 'seller_payout')
             ->firstOrFail();
 
         if ($settlement->status === 'completed') return $settlement;
+
+        // Never trust a stale destination stored on a settlement if the vendor has
+        // subsequently changed their payout address. A changed address must be
+        // re-verified before another automatic payout can be submitted.
+        if ($settlement->destination_address !== $vendor->bitcoin_payout_address) {
+            throw new RuntimeException('Seller payout address changed or no longer matches the verified vendor address. Payout paused pending verification.');
+        }
 
         $settlement = $settlement->fresh();
         if (!$settlement->btcpay_payout_id) {
