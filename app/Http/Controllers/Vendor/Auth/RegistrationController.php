@@ -21,21 +21,23 @@ class RegistrationController extends Controller
     {
         $key = 'vendor-register:'.strtolower((string) $request->ip());
         if (RateLimiter::tooManyAttempts($key, 5)) {
-            return back()->withErrors(['email' => 'Too many registration attempts. Please try again later.'])->withInput();
+            return back()->withErrors(['pseudonym' => 'Too many registration attempts. Please try again later.'])->withInput();
         }
         RateLimiter::hit($key, 600);
 
         $data = $request->validate([
-            'name' => ['required','string','max:255'],
-            'email' => ['required','email','max:255','unique:vendors,email'],
+            'pseudonym' => ['required','string','alpha_dash','min:3','max:40','unique:vendors,pseudonym'],
+            'name' => ['nullable','string','max:255'],
+            'email' => ['nullable','email','max:255','unique:vendors,email'],
             'phone' => ['nullable','string','max:50'],
             'password' => ['required','string','min:8','confirmed'],
             'terms' => ['accepted'],
         ]);
 
         $vendor = Vendor::create([
-            'name' => $data['name'],
-            'email' => strtolower($data['email']),
+            'pseudonym' => $data['pseudonym'],
+            'name' => $data['name'] ?? $data['pseudonym'],
+            'email' => isset($data['email']) ? strtolower($data['email']) : null,
             'phone' => $data['phone'] ?? null,
             'password' => Hash::make($data['password']),
             'status' => 'pending',
