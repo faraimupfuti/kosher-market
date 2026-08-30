@@ -11,9 +11,14 @@ class Vendor extends Authenticatable
 
     protected $guard = 'vendor';
 
-    protected $fillable = ['name', 'email', 'password', 'phone', 'status', 'profile_image'];
+    protected $fillable = ['name', 'email', 'password', 'phone', 'status', 'profile_image', 'bitcoin_payout_address', 'bitcoin_payout_address_verified_at'];
 
     protected $hidden = ['password'];
 
-    protected $casts = ['password' => 'hashed'];
+    protected $casts = ['password' => 'hashed', 'bitcoin_payout_address_verified_at' => 'datetime'];
+
+    public function escrowTransactions()
+    {
+        return $this->hasMany(EscrowTransaction::class, 'vendor_id');
+    }
 }
