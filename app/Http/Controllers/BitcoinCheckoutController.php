@@ -8,7 +8,7 @@ use App\Services\BitcoinEscrowService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Throwable;
+use RuntimeException;
 
 class BitcoinCheckoutController extends Controller
 {
@@ -16,7 +16,11 @@ class BitcoinCheckoutController extends Controller
 
     public function index(Request $request)
     {
-        $product = Product::findOrFail($request->integer('product_id'));
+        $product = Product::with('primaryVariant')->findOrFail($request->integer('product_id'));
+        abort_if(strtoupper((string) $product->currency) !== 'BTC', 422, 'This marketplace accepts Bitcoin only.');
+        $price = $product->primaryVariant?->discount_price ?: $product->primaryVariant?->price ?: $product->price;
+        abort_if((float) $price <= 0, 422, 'Product does not have a valid BTC price.');
+        $product->setAttribute('checkout_price', (float) $price);
         return view('checkout.bitcoin', compact('product'));
     }
 
@@ -31,11 +35,11 @@ class BitcoinCheckoutController extends Controller
         ]);
 
         $result = DB::transaction(function () use ($data, $customer) {
-            $product = Product::whereKey($data['product_id'])->lockForUpdate()->firstOrFail();
+            $product = Product::with('primaryVariant')->whereKey($data['product_id'])->lockForUpdate()->firstOrFail();
             abort_if(!$product->status, 422, 'Product is unavailable.');
-            $price = (float) $product->sale_price;
+            abort_if(strtoupper((string) $product->currency) !== 'BTC', 422, 'This marketplace accepts Bitcoin only.');
+            $price = (float) ($product->primaryVariant?->discount_price ?: $product->primaryVariant?->price ?: $product->price);
             abort_if($price <= 0, 422, 'Product does not have a valid BTC price.');
-            abort_if(strtoupper((string) ($product->currency ?? '')) !== 'BTC', 422, 'This marketplace accepts Bitcoin only.');
 
             $quantity = (int) $data['quantity'];
             $total = round($price * $quantity, 8);
