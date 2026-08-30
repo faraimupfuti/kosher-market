@@ -12,23 +12,17 @@ class Kernel extends ConsoleKernel
     protected $commands = [
         Velstore::class,
         DataImport::class,
+        Commands\ReleaseEligibleEscrow::class,
     ];
 
-    /**
-     * Define the application's command schedule.
-     */
     protected function schedule(Schedule $schedule): void
     {
-        // $schedule->command('inspire')->hourly();
+        $schedule->command('escrow:release-eligible')->hourly()->withoutOverlapping();
     }
 
-    /**
-     * Register the commands for the application.
-     */
     protected function commands(): void
     {
         $this->load(__DIR__.'/Commands');
-
         require base_path('routes/console.php');
     }
 }
