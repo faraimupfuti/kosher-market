@@ -1,0 +1,26 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: kosher-market-scheduler
+  namespace: kosher-market
+spec:
+  schedule: "* * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: scheduler
+              image: ghcr.io/faraimupfuti/kosher-market:latest
+              imagePullPolicy: Always
+              command: ["php", "artisan", "schedule:run"]
+              envFrom:
+                - configMapRef:
+                    name: kosher-market-config
+                - secretRef:
+                    name: kosher-market-secrets
