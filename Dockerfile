@@ -1,4 +1,4 @@
-# Velstore Laravel + Vite deployment image for Render
+# Kosher Market production container
 FROM php:8.3-cli
 
 WORKDIR /var/www/html
@@ -21,7 +21,6 @@ RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoload
 COPY package.json package-lock.json ./
 RUN npm ci
 
-# Vite needs the Laravel source and resources to be present before compilation.
 COPY . .
 RUN npm run build && rm -rf node_modules
 
@@ -31,5 +30,5 @@ RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framewor
     && php artisan route:clear \
     && php artisan view:clear
 
-EXPOSE 10000
-CMD ["sh", "-c", "php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=${PORT:-10000}"]
+EXPOSE 8000
+CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
