@@ -16,7 +16,7 @@ class Vendor extends Authenticatable
 
     protected $hidden = ['password', 'email', 'phone', 'bitcoin_payout_address'];
 
-    protected $casts = ['password' => 'hashed', 'bitcoin_payout_address_verified_at' => 'datetime'];
+    protected $casts = ['password' => 'hashed', 'bitcoin_payout_address_verified_at' => 'datetime', 'pseudonym_changed_at' => 'datetime'];
 
     protected static function booted(): void
     {
@@ -30,6 +30,10 @@ class Vendor extends Authenticatable
             if (in_array($normalized, $reserved, true)) {
                 throw ValidationException::withMessages(['pseudonym' => 'This pseudonym is reserved and cannot be used.']);
             }
+            if ($vendor->exists && $vendor->isDirty('pseudonym') && $vendor->getOriginal('pseudonym') && $vendor->pseudonym_changed_at?->gt(now()->subDays(30))) {
+                throw ValidationException::withMessages(['pseudonym' => 'For marketplace safety, a vendor pseudonym can only be changed once every 30 days.']);
+            }
+            if ($vendor->exists && $vendor->isDirty('pseudonym')) $vendor->pseudonym_changed_at = now();
             $vendor->pseudonym = $normalized;
         });
     }
