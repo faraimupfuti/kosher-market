@@ -13,12 +13,19 @@ spec:
       labels:
         app: kosher-market-worker
     spec:
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app: kosher-market-worker
       terminationGracePeriodSeconds: 60
       containers:
         - name: worker
           image: ghcr.io/faraimupfuti/kosher-market:latest
           imagePullPolicy: Always
-          command: ["php", "artisan", "queue:work", "--sleep=3", "--tries=3", "--timeout=120"]
+          command: ["php", "artisan", "queue:work", "--sleep=3", "--tries=3", "--timeout=120", "--max-time=3600"]
           envFrom:
             - configMapRef:
                 name: kosher-market-config
