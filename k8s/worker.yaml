@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kosher-market-worker
+  namespace: kosher-market
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: kosher-market-worker
+  template:
+    metadata:
+      labels:
+        app: kosher-market-worker
+    spec:
+      terminationGracePeriodSeconds: 60
+      containers:
+        - name: worker
+          image: ghcr.io/faraimupfuti/kosher-market:latest
+          imagePullPolicy: Always
+          command: ["php", "artisan", "queue:work", "--sleep=3", "--tries=3", "--timeout=120"]
+          envFrom:
+            - configMapRef:
+                name: kosher-market-config
+            - secretRef:
+                name: kosher-market-secrets
+          resources:
+            requests:
+              cpu: 150m
+              memory: 256Mi
+            limits:
+              cpu: 750m
+              memory: 768Mi
