@@ -105,6 +105,7 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::post('bitcoin/vendors/{vendor}/verify', [BitcoinSettlementController::class, 'verifyVendor'])->name('bitcoin.vendors.verify');
     Route::post('bitcoin/settlements/{settlement}/destination', [BitcoinSettlementController::class, 'destination'])->name('bitcoin.settlements.destination');
     Route::post('bitcoin/settlements/{settlement}/submit', [BitcoinSettlementController::class, 'submit'])->name('bitcoin.settlements.submit');
+    Route::post('bitcoin/settlements/{settlement}/approve', [BitcoinSettlementController::class, 'approve'])->name('bitcoin.settlements.approve');
     Route::post('bitcoin/settlements/{settlement}/sync', [BitcoinSettlementController::class, 'sync'])->name('bitcoin.settlements.sync');
 });
 
