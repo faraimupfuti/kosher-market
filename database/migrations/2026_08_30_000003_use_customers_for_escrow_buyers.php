@@ -9,8 +9,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('escrow_transactions', function (Blueprint $table) {
-            $table->dropForeign(['buyer_id']);
-            $table->foreign('buyer_id')->references('id')->on('customers')->cascadeOnDelete();
+            $table->foreign('buyer_id')
+                ->references('id')
+                ->on('customers')
+                ->cascadeOnDelete();
         });
     }
 
@@ -18,7 +20,6 @@ return new class extends Migration
     {
         Schema::table('escrow_transactions', function (Blueprint $table) {
             $table->dropForeign(['buyer_id']);
-            $table->foreign('buyer_id')->references('id')->on('users')->cascadeOnDelete();
         });
     }
 };
