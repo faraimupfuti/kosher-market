@@ -40,10 +40,7 @@ class BitcoinEscrowService
             $existing = Http::timeout(20)->withToken($apiKey)->acceptJson()->get($baseUrl.'/api/v1/stores/'.$storeId.'/invoices/'.$escrow->btcpay_invoice_id);
             if ($existing->successful()) return $existing->json();
         }
-        $response = Http::timeout(20)->withToken($apiKey)->acceptJson()->post($baseUrl.'/api/v1/stores/'.$storeId.'/invoices', [
-            'amount' => number_format((float) $escrow->amount, 8, '.', ''), 'currency' => 'BTC',
-            'metadata' => ['orderId' => (string) $escrow->order_id, 'escrowId' => (string) $escrow->id],
-        ]);
+        $response = Http::timeout(20)->withToken($apiKey)->acceptJson()->post($baseUrl.'/api/v1/stores/'.$storeId.'/invoices', ['amount' => number_format((float) $escrow->amount, 8, '.', ''), 'currency' => 'BTC', 'metadata' => ['orderId' => (string) $escrow->order_id, 'escrowId' => (string) $escrow->id]]);
         if ($response->failed()) throw new RuntimeException('BTCPay invoice creation failed.');
         $invoice = $response->json();
         $escrow->update(['btcpay_invoice_id' => $invoice['id'] ?? null, 'bitcoin_payment_address' => data_get($invoice, 'addresses.BTC')]);
@@ -102,13 +99,19 @@ class BitcoinEscrowService
         };
     }
 
+    private function btcpayConfig(): array
+    {
+        $baseUrl = rtrim((string) config('bitcoin.btcpay_url'), '/'); $storeId = config('bitcoin.btcpay_store_id'); $apiKey = config('bitcoin.btcpay_api_key');
+        if (!$baseUrl || !$storeId || !$apiKey) throw new RuntimeException('BTCPay Server is not configured.');
+        return [$baseUrl, $storeId, $apiKey];
+    }
+
     public function submitSettlement(BitcoinSettlement $settlement): BitcoinSettlement
     {
         if ($settlement->status === 'completed') return $settlement;
         if (!$settlement->destination_address) throw new RuntimeException('Settlement destination is missing.');
         if (!preg_match('/^(bc1[ac-hj-np-z02-9]{11,87}|[13][a-km-zA-HJ-NP-Z1-9]{25,34})$/', $settlement->destination_address)) throw new RuntimeException('Only valid Bitcoin mainnet addresses are accepted.');
-        $baseUrl = rtrim((string) config('bitcoin.btcpay_url'), '/'); $storeId = config('bitcoin.btcpay_store_id'); $apiKey = config('bitcoin.btcpay_api_key');
-        if (!$baseUrl || !$storeId || !$apiKey) throw new RuntimeException('BTCPay Server is not configured.');
+        [$baseUrl, $storeId, $apiKey] = $this->btcpayConfig();
         $response = Http::timeout(20)->withToken($apiKey)->acceptJson()->post($baseUrl.'/api/v1/stores/'.$storeId.'/payouts', ['destination' => $settlement->destination_address, 'amount' => number_format((float) $settlement->amount, 8, '.', ''), 'payoutMethodId' => 'BTC-CHAIN', 'approved' => false, 'metadata' => ['velstoreSettlementId' => (string) $settlement->id, 'escrowId' => (string) $settlement->escrow_transaction_id, 'type' => $settlement->type]]);
         if ($response->failed()) { $settlement->update(['status' => 'failed', 'error_message' => $response->body()]); throw new RuntimeException('BTCPay payout request failed.'); }
         $payout = $response->json();
@@ -116,17 +119,28 @@ class BitcoinEscrowService
         return $settlement->fresh();
     }
 
+    public function approveSettlement(BitcoinSettlement $settlement): BitcoinSettlement
+    {
+        if (!$settlement->btcpay_payout_id) throw new RuntimeException('Settlement has not been submitted to BTCPay.');
+        [$baseUrl, $storeId, $apiKey] = $this->btcpayConfig();
+        $current = Http::timeout(20)->withToken($apiKey)->acceptJson()->get($baseUrl.'/api/v1/payouts/'.$settlement->btcpay_payout_id);
+        if ($current->failed()) throw new RuntimeException('Unable to retrieve the BTCPay payout revision.');
+        $revision = (int) data_get($current->json(), 'revision', 0);
+        $response = Http::timeout(20)->withToken($apiKey)->acceptJson()->post($baseUrl.'/api/v1/payouts/'.$settlement->btcpay_payout_id, ['revision' => $revision]);
+        if ($response->failed()) throw new RuntimeException('BTCPay payout approval failed.');
+        return $this->syncSettlement($settlement->fresh());
+    }
+
     public function syncSettlement(BitcoinSettlement $settlement): BitcoinSettlement
     {
         if (!$settlement->btcpay_payout_id) return $this->submitSettlement($settlement);
-        $baseUrl = rtrim((string) config('bitcoin.btcpay_url'), '/'); $apiKey = config('bitcoin.btcpay_api_key');
-        if (!$baseUrl || !$apiKey) throw new RuntimeException('BTCPay Server is not configured.');
+        [$baseUrl, $storeId, $apiKey] = $this->btcpayConfig();
         $response = Http::timeout(20)->withToken($apiKey)->acceptJson()->get($baseUrl.'/api/v1/payouts/'.$settlement->btcpay_payout_id);
         if ($response->failed()) throw new RuntimeException('Unable to retrieve BTCPay payout status.');
         $payout = $response->json(); $state = $this->normalizePayoutState($payout['state'] ?? null); $proof = $payout['paymentProof'] ?? []; $txid = $proof['id'] ?? $proof['transactionId'] ?? null;
         $settlement->update(['status' => $state, 'bitcoin_txid' => $txid ?: $settlement->bitcoin_txid, 'completed_at' => $state === 'completed' ? ($settlement->completed_at ?: now()) : $settlement->completed_at]);
         if ($state === 'completed') {
-            $escrow = $settlement->escrow()->lockForUpdate()->first();
+            $escrow = $settlement->escrow()->first();
             if ($escrow) $escrow->update($settlement->type === 'seller_payout' ? ['status' => 'paid'] : ['status' => 'refunded', 'refunded_at' => $escrow->refunded_at ?: now()]);
         }
         return $settlement->fresh();
