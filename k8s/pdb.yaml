@@ -1,0 +1,21 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: kosher-market-web
+  namespace: kosher-market
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: kosher-market-web
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: kosher-market-worker
+  namespace: kosher-market
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: kosher-market-worker
