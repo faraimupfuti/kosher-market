@@ -14,3 +14,8 @@ data:
   DB_HOST: mysql
   DB_PORT: "3306"
   DB_DATABASE: kosher_market
+  REDIS_CLIENT: phpredis
+  REDIS_HOST: redis
+  REDIS_PORT: "6379"
+  REDIS_DB: "0"
+  REDIS_CACHE_DB: "1"
