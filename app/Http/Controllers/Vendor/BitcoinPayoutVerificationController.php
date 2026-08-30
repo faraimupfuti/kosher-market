@@ -9,6 +9,12 @@ use Illuminate\Support\Facades\Auth;
 
 class BitcoinPayoutVerificationController extends Controller
 {
+    public function show()
+    {
+        $vendor = Auth::guard('vendor')->user();
+        return view('vendor.bitcoin.verify-payout', compact('vendor'));
+    }
+
     public function requestVerification(Request $request, BitcoinPayoutAddressVerificationService $service)
     {
         $vendor = Auth::guard('vendor')->user();
