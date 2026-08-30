@@ -2,25 +2,37 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\EscrowTransaction;
 use App\Models\EscrowDispute;
+use App\Models\EscrowTransaction;
+use App\Models\Order;
 use App\Services\BitcoinEscrowService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Str;
-use Symfony\Component\HttpFoundation\Response;
 use Throwable;
 
 class EscrowController extends Controller
 {
     public function __construct(private BitcoinEscrowService $escrow) {}
 
+    public function create(Request $request, Order $order)
+    {
+        $customer = Auth::guard('customer')->user();
+        abort_unless($customer && (int) $order->customer_id === (int) $customer->id, 403);
+
+        try {
+            $escrow = $this->escrow->createForOrder($order);
+            return response()->json($escrow->load(['order', 'vendor']), 201);
+        } catch (Throwable $e) {
+            report($e);
+            return response()->json(['message' => 'Unable to create escrow for this order.'], 422);
+        }
+    }
+
     public function show(EscrowTransaction $escrow)
     {
         $customer = Auth::guard('customer')->user();
         abort_unless($customer && (int) $escrow->buyer_id === (int) $customer->id, 403);
-
         return response()->json($escrow->load(['order', 'vendor', 'disputes']));
     }
 
@@ -48,7 +60,7 @@ class EscrowController extends Controller
         }
     }
 
-    public function confirmReceipt(Request $request, EscrowTransaction $escrow)
+    public function confirmReceipt(EscrowTransaction $escrow)
     {
         $customer = Auth::guard('customer')->user();
         abort_unless($customer && (int) $escrow->buyer_id === (int) $customer->id, 403);
@@ -88,7 +100,6 @@ class EscrowController extends Controller
         ]);
 
         $escrow->update(['status' => 'disputed']);
-
         return response()->json(['success' => true, 'dispute' => $dispute], 201);
     }
 
@@ -109,7 +120,6 @@ class EscrowController extends Controller
         $payload = $request->json()->all();
         $type = $payload['type'] ?? '';
         $invoiceId = $payload['invoiceId'] ?? null;
-
         if (!$invoiceId || !in_array($type, ['InvoiceSettled', 'InvoicePaymentSettled'], true)) {
             return response()->json(['received' => true]);
         }
@@ -123,7 +133,6 @@ class EscrowController extends Controller
 
         $invoiceResponse = Http::withToken($apiKey)->acceptJson()
             ->get($baseUrl.'/api/v1/stores/'.$storeId.'/invoices/'.$invoiceId);
-
         if ($invoiceResponse->failed()) {
             return response()->json(['message' => 'Unable to verify invoice.'], 502);
         }
@@ -139,10 +148,8 @@ class EscrowController extends Controller
             return response()->json(['received' => true]);
         }
 
-        // Amount and blockchain transaction details are taken from BTCPay's verified invoice.
         $btcAmount = (float) ($invoice['amount'] ?? $escrow->amount);
         $this->escrow->markFunded($escrow, 'btcpay-'.$invoiceId, (int) config('bitcoin.required_confirmations', 1), $btcAmount);
-
         return response()->json(['received' => true]);
     }
 }
