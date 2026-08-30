@@ -1,8 +1,8 @@
 {
-    "name": "velstorelabs/velstore",
+    "name": "faraimupfuti/kosher-market",
     "type": "project",
-    "description": "Velstore - A multi-vendor, multi-lingual Laravel eCommerce boilerplate.",
-    "keywords": ["laravel", "ecommerce", "boilerplate", "multi-vendor", "multilingual"],
+    "description": "Kosher Market - A Bitcoin-only multi-vendor Laravel marketplace with escrow-protected transactions.",
+    "keywords": ["bitcoin", "btc", "marketplace", "ecommerce", "escrow", "multi-vendor", "laravel", "btcpay"],
     "license": "MIT",
     "require": {
         "php": "^8.1",
@@ -24,54 +24,19 @@
         "spatie/laravel-ignition": "^2.0"
     },
     "autoload": {
-        "psr-4": {
-            "App\\": "app/",
-            "Database\\Factories\\": "database/factories/",
-            "Database\\Seeders\\": "database/seeders/"
-        },
-        "files": [
-            "app/Helpers/cms_translate.php",
-            "app/Helpers/currency.php"
-        ]
+        "psr-4": {"App\\": "app/", "Database\\Factories\\": "database/factories/", "Database\\Seeders\\": "database/seeders/"},
+        "files": ["app/Helpers/cms_translate.php", "app/Helpers/currency.php"]
     },
-    "autoload-dev": {
-        "psr-4": {
-            "Tests\\": "tests/"
-        }
-    },
+    "autoload-dev": {"psr-4": {"Tests\\": "tests/"}},
     "scripts": {
-        "post-autoload-dump": [
-            "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
-            "@php artisan package:discover --ansi"
-        ],
-        "post-update-cmd": [
-            "@php artisan vendor:publish --tag=laravel-assets --ansi --force"
-        ],
-        "post-root-package-install": [
-            "@php -r \"file_exists('.env') || copy('.env.example', '.env');\""
-        ],
-        "post-create-project-cmd": [
-            "@php artisan key:generate --ansi"
-        ]
+        "post-autoload-dump": ["Illuminate\\Foundation\\ComposerScripts::postAutoloadDump", "@php artisan package:discover --ansi"],
+        "post-update-cmd": ["@php artisan vendor:publish --tag=laravel-assets --ansi --force"],
+        "post-root-package-install": ["@php -r \"file_exists('.env') || copy('.env.example', '.env');\""],
+        "post-create-project-cmd": ["@php artisan key:generate --ansi"]
     },
-    "extra": {
-        "laravel": {
-            "dont-discover": []
-        }
-    },
-    "config": {
-        "optimize-autoloader": true,
-        "preferred-install": "dist",
-        "sort-packages": true,
-        "allow-plugins": {
-            "pestphp/pest-plugin": true,
-            "php-http/discovery": true
-        }
-    },
+    "extra": {"laravel": {"dont-discover": []}},
+    "config": {"optimize-autoloader": true, "preferred-install": "dist", "sort-packages": true, "allow-plugins": {"pestphp/pest-plugin": true, "php-http/discovery": true}},
     "minimum-stability": "beta",
     "prefer-stable": true,
-    "support": {
-        "issues": "https://github.com/velstorelabs/velstore/issues",
-        "source": "https://github.com/velstorelabs/velstore"
-    }
+    "support": {"issues": "https://github.com/faraimupfuti/kosher-market/issues", "source": "https://github.com/faraimupfuti/kosher-market"}
 }
