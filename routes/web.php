@@ -29,6 +29,7 @@ use App\Http\Controllers\SiteSettingsController;
 use App\Http\Controllers\Vendor\BitcoinPayoutController;
 use App\Http\Controllers\Vendor\BitcoinPayoutVerificationController;
 use App\Http\Controllers\VendorRegistrationFeeController;
+use App\Http\Controllers\VendorProfileController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/login', function () { return view('admin.auth.login'); });
@@ -73,10 +74,10 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::resource('reviews', ProductReviewController::class)->except(['create', 'store']);
     Route::resource('attributes', AttributeController::class);
     Route::post('attributes/{attribute}/values', [AttributeController::class, 'storeValue'])->name('attributes.values.store');
-    Route::delete('values/{value}', [AttributeController::class, 'destroyValue'])->name('values.destroy');
+    Route::delete('values/{value}', [AttributeController::class, 'destroy'])->name('values.destroy');
     Route::post('attributes/data', [AttributeController::class, 'getAttributesData'])->name('attributes.data');
     Route::post('values/{value}/translations', [AttributeController::class, 'storeTranslation'])->name('values.translations.store');
-    Route::delete('translations/{translation}', [AttributeController::class, 'destroyTranslation'])->name('translations.destroy');
+    Route::delete('translations/{translation}', [AttributeController::class, 'destroy'])->name('translations.destroy');
     Route::get('vendors', [VendorController::class, 'index'])->name('vendors.index');
     Route::get('vendors/data', [VendorController::class, 'getVendorData'])->name('vendors.data');
     Route::delete('vendors/{id}', [VendorController::class, 'destroy'])->name('vendors.destroy');
@@ -131,6 +132,7 @@ Route::middleware('auth:customer')->prefix('escrow')->name('escrow.')->group(fun
 });
 
 Route::post('/bitcoin/btcpay/webhook', [EscrowController::class, 'webhook'])->name('bitcoin.btcpay.webhook');
+Route::get('/vendors/{pseudonym}', [VendorProfileController::class, 'show'])->name('vendors.profile');
 
 Route::middleware('auth:customer')->group(function () {
     Route::get('/checkout', [BitcoinCheckoutController::class, 'index'])->name('checkout.index');
