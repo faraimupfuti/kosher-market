@@ -1,4 +1,4 @@
-@extends('vendor.layouts.app')
+@extends('vendor.layouts.master')
 @section('content')
 <div class="container py-4">
     <div class="card">
@@ -10,8 +10,8 @@
             <form method="POST" action="{{ route('vendor.bitcoin.payout.update') }}">
                 @csrf @method('PATCH')
                 <label class="form-label">Bitcoin payout address</label>
-                <input name="bitcoin_payout_address" value="{{ old('bitcoin_payout_address', $vendor->bitcoin_payout_address) }}" class="form-control" placeholder="bc1..." required maxlength="120">
-                <div class="form-text">Use a Bitcoin mainnet address that you control. Verify the address carefully before saving.</div>
+                <input name="bitcoin_payout_address" value="{{ old('bitcoin_payout_address', $vendor->bitcoin_payout_address) }}" class="form-control" placeholder="bc1..." required maxlength="120" autocomplete="off">
+                <div class="form-text">Use a Bitcoin mainnet address that you control. Verify every character before saving.</div>
                 <button class="btn btn-primary mt-3">Save Bitcoin Address</button>
             </form>
             <hr>
