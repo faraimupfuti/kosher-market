@@ -48,16 +48,24 @@ return new class extends Migration {
             $table->primary(['product_id', 'country_id']);
         });
 
+        // The existing schema stores the detailed destination in shipping_addresses.
+        // Keep the order-level shipping metadata independent of that table so this
+        // migration does not depend on a non-existent orders.shipping_address column.
         Schema::table('orders', function (Blueprint $table) {
-            $table->char('shipping_country_code', 2)->nullable()->after('shipping_address');
-            $table->decimal('shipping_cost_btc', 20, 8)->default(0)->after('shipping_country_code');
+            $table->char('shipping_country_code', 2)->nullable();
+            $table->decimal('shipping_cost_btc', 20, 8)->default(0);
         });
     }
 
     public function down(): void
     {
         Schema::table('orders', function (Blueprint $table) {
-            $table->dropColumn(['shipping_country_code', 'shipping_cost_btc']);
+            if (Schema::hasColumn('orders', 'shipping_country_code')) {
+                $table->dropColumn('shipping_country_code');
+            }
+            if (Schema::hasColumn('orders', 'shipping_cost_btc')) {
+                $table->dropColumn('shipping_cost_btc');
+            }
         });
         Schema::dropIfExists('product_shipping_countries');
         Schema::dropIfExists('vendor_shipping_rates');
