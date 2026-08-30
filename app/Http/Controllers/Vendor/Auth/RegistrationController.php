@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Vendor\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\Vendor;
+use App\Rules\AllowedVendorPseudonym;
 use App\Services\VendorRegistrationFeeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -12,10 +13,7 @@ use Illuminate\Support\Facades\RateLimiter;
 
 class RegistrationController extends Controller
 {
-    public function create()
-    {
-        return view('vendor.auth.register');
-    }
+    public function create() { return view('vendor.auth.register'); }
 
     public function store(Request $request, VendorRegistrationFeeService $fees)
     {
@@ -26,7 +24,7 @@ class RegistrationController extends Controller
         RateLimiter::hit($key, 600);
 
         $data = $request->validate([
-            'pseudonym' => ['required','string','alpha_dash','min:3','max:40','unique:vendors,pseudonym'],
+            'pseudonym' => ['required','string','max:30','unique:vendors,pseudonym',new AllowedVendorPseudonym()],
             'name' => ['nullable','string','max:255'],
             'email' => ['nullable','email','max:255','unique:vendors,email'],
             'phone' => ['nullable','string','max:50'],
@@ -48,10 +46,7 @@ class RegistrationController extends Controller
 
         try {
             $fee = $fees->createOrGet($vendor);
-            return redirect()->route('vendor.registration-fee')->with('bitcoin_invoice', [
-                'checkoutLink' => $fee->checkout_url,
-                'invoiceId' => $fee->btcpay_invoice_id,
-            ]);
+            return redirect()->route('vendor.registration-fee')->with('bitcoin_invoice', ['checkoutLink' => $fee->checkout_url, 'invoiceId' => $fee->btcpay_invoice_id]);
         } catch (\Throwable $e) {
             report($e);
             return redirect()->route('vendor.registration-fee')->with('error', 'Your vendor account was created, but the Bitcoin registration invoice could not be generated. Please try again from the registration-fee page.');
