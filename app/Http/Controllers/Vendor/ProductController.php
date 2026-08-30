@@ -11,7 +11,7 @@ use App\Models\Language;
 use App\Models\Product;
 use App\Models\ProductAttributeValue;
 use App\Services\Admin\CategoryService;
-use App\Services\vendor\ProductService;
+use App\Services\Vendor\ProductService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
