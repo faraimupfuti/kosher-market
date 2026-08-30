@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\BitcoinSettlement;
 use App\Models\EscrowLedgerEntry;
 use App\Models\EscrowTransaction;
 use App\Models\Order;
@@ -39,6 +40,11 @@ class BitcoinEscrowService
         $storeId = config('bitcoin.btcpay_store_id');
         $apiKey = config('bitcoin.btcpay_api_key');
         if (!$baseUrl || !$storeId || !$apiKey) throw new RuntimeException('BTCPay Server is not configured.');
+
+        if ($escrow->btcpay_invoice_id) {
+            $existing = Http::timeout(20)->withToken($apiKey)->acceptJson()->get($baseUrl.'/api/v1/stores/'.$storeId.'/invoices/'.$escrow->btcpay_invoice_id);
+            if ($existing->successful()) return $existing->json();
+        }
 
         $response = Http::timeout(20)->withToken($apiKey)->acceptJson()->post($baseUrl.'/api/v1/stores/'.$storeId.'/invoices', [
             'amount' => number_format((float) $escrow->amount, 8, '.', ''),
@@ -87,12 +93,19 @@ class BitcoinEscrowService
     public function release(EscrowTransaction $escrow, ?string $note = null): EscrowTransaction
     {
         return DB::transaction(function () use ($escrow, $note) {
-            $escrow = EscrowTransaction::whereKey($escrow->id)->lockForUpdate()->firstOrFail();
+            $escrow = EscrowTransaction::with('vendor')->whereKey($escrow->id)->lockForUpdate()->firstOrFail();
             if ($escrow->status !== 'funded') throw new RuntimeException('Only funded escrow can be released.');
+            if (!$escrow->vendor?->bitcoin_payout_address) throw new RuntimeException('Vendor has not configured a Bitcoin payout address.');
+            if (!$escrow->vendor?->bitcoin_payout_address_verified_at) throw new RuntimeException('Vendor Bitcoin payout address must be verified before release.');
+
             $escrow->update(['status' => 'released', 'released_at' => now(), 'release_note' => $note]);
             if (!$escrow->ledgerEntries()->where('type', 'seller_payout_due')->exists()) {
                 EscrowLedgerEntry::create(['escrow_transaction_id' => $escrow->id, 'type' => 'seller_payout_due', 'amount' => $escrow->seller_amount, 'currency' => 'BTC', 'reference' => 'ESCROW-'.$escrow->id]);
             }
+            BitcoinSettlement::firstOrCreate(['escrow_transaction_id' => $escrow->id, 'type' => 'seller_payout'], [
+                'vendor_id' => $escrow->vendor_id, 'amount' => $escrow->seller_amount, 'currency' => 'BTC',
+                'destination_address' => $escrow->vendor->bitcoin_payout_address, 'status' => 'pending',
+            ]);
             return $escrow;
         });
     }
@@ -106,7 +119,57 @@ class BitcoinEscrowService
             if (!$escrow->ledgerEntries()->where('type', 'buyer_refund_due')->exists()) {
                 EscrowLedgerEntry::create(['escrow_transaction_id' => $escrow->id, 'type' => 'buyer_refund_due', 'amount' => $escrow->bitcoin_amount ?? $escrow->amount, 'currency' => 'BTC', 'reference' => 'REFUND-'.$escrow->id]);
             }
+            BitcoinSettlement::firstOrCreate(['escrow_transaction_id' => $escrow->id, 'type' => 'buyer_refund'], [
+                'vendor_id' => null, 'amount' => $escrow->bitcoin_amount ?? $escrow->amount, 'currency' => 'BTC', 'status' => 'needs_destination',
+            ]);
             return $escrow;
         });
+    }
+
+    public function submitSettlement(BitcoinSettlement $settlement): BitcoinSettlement
+    {
+        if ($settlement->status === 'completed') return $settlement;
+        if (!$settlement->destination_address) throw new RuntimeException('Settlement destination is missing.');
+        if (!preg_match('/^(bc1[ac-hj-np-z02-9]{11,87}|[13][a-km-zA-HJ-NP-Z1-9]{25,34})$/', $settlement->destination_address)) throw new RuntimeException('Only valid Bitcoin mainnet addresses are accepted.');
+
+        $baseUrl = rtrim((string) config('bitcoin.btcpay_url'), '/');
+        $storeId = config('bitcoin.btcpay_store_id');
+        $apiKey = config('bitcoin.btcpay_api_key');
+        if (!$baseUrl || !$storeId || !$apiKey) throw new RuntimeException('BTCPay Server is not configured.');
+
+        $response = Http::timeout(20)->withToken($apiKey)->acceptJson()->post($baseUrl.'/api/v1/stores/'.$storeId.'/payouts', [
+            'destination' => $settlement->destination_address,
+            'amount' => number_format((float) $settlement->amount, 8, '.', ''),
+            'payoutMethodId' => 'BTC-CHAIN',
+            'approved' => false,
+            'metadata' => ['velstoreSettlementId' => (string) $settlement->id, 'escrowId' => (string) $settlement->escrow_transaction_id, 'type' => $settlement->type],
+        ]);
+        if ($response->failed()) {
+            $settlement->update(['status' => 'failed', 'error_message' => $response->body()]);
+            throw new RuntimeException('BTCPay payout request failed.');
+        }
+
+        $payout = $response->json();
+        $settlement->update([
+            'status' => $payout['state'] ?? 'awaiting_approval',
+            'btcpay_payout_id' => $payout['id'] ?? null,
+            'submitted_at' => now(),
+            'error_message' => null,
+        ]);
+        return $settlement->fresh();
+    }
+
+    public function syncSettlement(BitcoinSettlement $settlement): BitcoinSettlement
+    {
+        if (!$settlement->btcpay_payout_id) return $this->submitSettlement($settlement);
+        $baseUrl = rtrim((string) config('bitcoin.btcpay_url'), '/'); $apiKey = config('bitcoin.btcpay_api_key');
+        if (!$baseUrl || !$apiKey) throw new RuntimeException('BTCPay Server is not configured.');
+        $response = Http::timeout(20)->withToken($apiKey)->acceptJson()->get($baseUrl.'/api/v1/payouts/'.$settlement->btcpay_payout_id);
+        if ($response->failed()) throw new RuntimeException('Unable to retrieve BTCPay payout status.');
+        $payout = $response->json(); $state = $payout['state'] ?? $settlement->status;
+        $proof = $payout['paymentProof'] ?? [];
+        $txid = $proof['id'] ?? $proof['transactionId'] ?? null;
+        $settlement->update(['status' => strtolower((string)$state), 'bitcoin_txid' => $txid ?: $settlement->bitcoin_txid, 'completed_at' => $state === 'Completed' ? ($settlement->completed_at ?: now()) : $settlement->completed_at]);
+        return $settlement->fresh();
     }
 }
