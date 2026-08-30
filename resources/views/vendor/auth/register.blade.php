@@ -17,11 +17,16 @@
             This is a one-time fee. Your vendor account remains pending until the Bitcoin payment is confirmed.
         </div>
 
-        <form method="POST" action="{{ route('vendor.register.store') }}">
+        <form method="POST" action="{{ route('vendor.register.store') }}" autocomplete="off">
             @csrf
-            <div class="mb-3"><label class="form-label">Business / Vendor Name</label><input name="name" class="form-control" value="{{ old('name') }}" required></div>
-            <div class="mb-3"><label class="form-label">Email</label><input type="email" name="email" class="form-control" value="{{ old('email') }}" required></div>
-            <div class="mb-3"><label class="form-label">Phone</label><input name="phone" class="form-control" value="{{ old('phone') }}"></div>
+            <div class="mb-3">
+                <label class="form-label">Vendor Pseudonym</label>
+                <input name="pseudonym" class="form-control" value="{{ old('pseudonym') }}" minlength="3" maxlength="40" pattern="[A-Za-z0-9_-]+" required>
+                <div class="form-text">This is your public marketplace identity. Use a nickname or business alias; do not use your email address or phone number.</div>
+            </div>
+            <div class="mb-3"><label class="form-label">Business / Legal Name <span class="text-muted">(optional)</span></label><input name="name" class="form-control" value="{{ old('name') }}"></div>
+            <div class="mb-3"><label class="form-label">Email <span class="text-muted">(optional)</span></label><input type="email" name="email" class="form-control" value="{{ old('email') }}"><div class="form-text">Optional contact/recovery information. It is not your marketplace identity.</div></div>
+            <div class="mb-3"><label class="form-label">Phone <span class="text-muted">(optional)</span></label><input name="phone" class="form-control" value="{{ old('phone') }}"></div>
             <div class="row"><div class="col-md-6 mb-3"><label class="form-label">Password</label><input type="password" name="password" class="form-control" required></div><div class="col-md-6 mb-3"><label class="form-label">Confirm Password</label><input type="password" name="password_confirmation" class="form-control" required></div></div>
             <div class="form-check mb-4"><input class="form-check-input" type="checkbox" name="terms" value="1" id="terms" required><label class="form-check-label" for="terms">I agree to the Kosher Market vendor terms and understand the $200 one-time Bitcoin onboarding fee.</label></div>
             <button class="btn btn-primary w-100" type="submit">Create Vendor Account & Continue to Bitcoin Payment</button>
