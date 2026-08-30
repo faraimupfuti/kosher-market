@@ -7,12 +7,19 @@ COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
 COPY resources ./resources
 COPY public ./public
-COPY vite.config.js .
+COPY vite.config.js ./
 RUN npm run build
 
-# Install production PHP dependencies without requiring PHP in the final Node stage.
-FROM composer:2 AS vendor
+# Install production PHP dependencies using the same PHP major/minor version
+# as the runtime. The official composer:2 image can move to a newer PHP
+# platform independently, which can make an older composer.lock uninstallable.
+FROM php:8.3-cli AS vendor
 WORKDIR /app
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git unzip libzip-dev libicu-dev libonig-dev \
+    && docker-php-ext-install -j"$(nproc)" bcmath intl mbstring pdo_mysql zip \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 COPY composer.json composer.lock ./
 RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader --no-progress --no-scripts
 
