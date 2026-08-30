@@ -126,6 +126,21 @@ class BitcoinEscrowService
         });
     }
 
+    private function normalizePayoutState(?string $state): string
+    {
+        return match (strtolower(str_replace(['-', ' '], '_', (string) $state))) {
+            'awaitingapproval' => 'awaiting_approval',
+            'awaiting_approval' => 'awaiting_approval',
+            'awaitingpayment' => 'awaiting_payment',
+            'awaiting_payment' => 'awaiting_payment',
+            'inprogress' => 'in_progress',
+            'in_progress' => 'in_progress',
+            'completed' => 'completed',
+            'cancelled', 'canceled' => 'cancelled',
+            default => 'pending',
+        };
+    }
+
     public function submitSettlement(BitcoinSettlement $settlement): BitcoinSettlement
     {
         if ($settlement->status === 'completed') return $settlement;
@@ -151,7 +166,7 @@ class BitcoinEscrowService
 
         $payout = $response->json();
         $settlement->update([
-            'status' => $payout['state'] ?? 'awaiting_approval',
+            'status' => $this->normalizePayoutState($payout['state'] ?? null),
             'btcpay_payout_id' => $payout['id'] ?? null,
             'submitted_at' => now(),
             'error_message' => null,
@@ -166,10 +181,10 @@ class BitcoinEscrowService
         if (!$baseUrl || !$apiKey) throw new RuntimeException('BTCPay Server is not configured.');
         $response = Http::timeout(20)->withToken($apiKey)->acceptJson()->get($baseUrl.'/api/v1/payouts/'.$settlement->btcpay_payout_id);
         if ($response->failed()) throw new RuntimeException('Unable to retrieve BTCPay payout status.');
-        $payout = $response->json(); $state = $payout['state'] ?? $settlement->status;
+        $payout = $response->json(); $state = $this->normalizePayoutState($payout['state'] ?? null);
         $proof = $payout['paymentProof'] ?? [];
         $txid = $proof['id'] ?? $proof['transactionId'] ?? null;
-        $settlement->update(['status' => strtolower((string)$state), 'bitcoin_txid' => $txid ?: $settlement->bitcoin_txid, 'completed_at' => $state === 'Completed' ? ($settlement->completed_at ?: now()) : $settlement->completed_at]);
+        $settlement->update(['status' => $state, 'bitcoin_txid' => $txid ?: $settlement->bitcoin_txid, 'completed_at' => $state === 'completed' ? ($settlement->completed_at ?: now()) : $settlement->completed_at]);
         return $settlement->fresh();
     }
 }
