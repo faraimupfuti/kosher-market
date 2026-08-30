@@ -27,6 +27,7 @@ use App\Http\Controllers\BitcoinCheckoutController;
 use App\Http\Controllers\EscrowController;
 use App\Http\Controllers\SiteSettingsController;
 use App\Http\Controllers\Vendor\BitcoinPayoutController;
+use App\Http\Controllers\Vendor\BitcoinPayoutVerificationController;
 use App\Http\Controllers\VendorRegistrationFeeController;
 use Illuminate\Support\Facades\Route;
 
@@ -116,6 +117,9 @@ Route::middleware('auth:vendor')->prefix('vendor')->name('vendor.')->group(funct
     Route::get('/bitcoin/payout-address', [BitcoinPayoutController::class, 'edit'])->name('bitcoin.payout.edit');
     Route::put('/bitcoin/payout-address', [BitcoinPayoutController::class, 'update'])->name('bitcoin.payout.update');
     Route::get('/bitcoin/payouts', [BitcoinPayoutController::class, 'index'])->name('bitcoin.payouts');
+    Route::get('/bitcoin/payout-address/verify', [BitcoinPayoutVerificationController::class, 'show'])->name('bitcoin.payout.verify');
+    Route::post('/bitcoin/payout-address/verify/request', [BitcoinPayoutVerificationController::class, 'requestVerification'])->name('bitcoin.payout.verify.request');
+    Route::post('/bitcoin/payout-address/verify/confirm', [BitcoinPayoutVerificationController::class, 'confirm'])->name('bitcoin.payout.verify.confirm');
 });
 
 Route::middleware('auth:customer')->prefix('escrow')->name('escrow.')->group(function () {
