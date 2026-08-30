@@ -17,8 +17,15 @@
         @foreach($settlements as $s)<tr>
             <td>#{{ $s->id }}</td><td>{{ $s->type }}</td><td>{{ number_format((float)$s->amount,8) }} BTC</td>
             <td>@if($s->destination_address)<code>{{ $s->destination_address }}</code>@else<form method="POST" action="{{ route('admin.bitcoin.settlements.destination',$s) }}" class="d-flex gap-2">@csrf<input name="destination_address" class="form-control" placeholder="bc1..." required><button class="btn btn-sm btn-secondary">Save</button></form>@endif</td>
-            <td>{{ $s->status }} @if($s->bitcoin_txid)<br><small>TX: {{ $s->bitcoin_txid }}</small>@endif</td>
-            <td>@if($s->destination_address && !$s->btcpay_payout_id)<form method="POST" action="{{ route('admin.bitcoin.settlements.submit',$s) }}">@csrf<button class="btn btn-sm btn-primary">Submit to BTCPay</button></form>@elseif($s->btcpay_payout_id)<form method="POST" action="{{ route('admin.bitcoin.settlements.sync',$s) }}">@csrf<button class="btn btn-sm btn-outline-primary">Sync</button></form>@endif</td>
+            <td>{{ ucwords(str_replace('_',' ',$s->status)) }} @if($s->bitcoin_txid)<br><small>TX: {{ $s->bitcoin_txid }}</small>@endif</td>
+            <td>
+                @if($s->destination_address && !$s->btcpay_payout_id)
+                    <form method="POST" action="{{ route('admin.bitcoin.settlements.submit',$s) }}">@csrf<button class="btn btn-sm btn-primary">Submit to BTCPay</button></form>
+                @elseif($s->btcpay_payout_id)
+                    @if($s->status === 'awaiting_approval')<form method="POST" action="{{ route('admin.bitcoin.settlements.approve',$s) }}" class="d-inline">@csrf<button class="btn btn-sm btn-success">Approve Payout</button></form>@endif
+                    <form method="POST" action="{{ route('admin.bitcoin.settlements.sync',$s) }}" class="d-inline">@csrf<button class="btn btn-sm btn-outline-primary">Sync</button></form>
+                @endif
+            </td>
         </tr>@endforeach
         </tbody></table></div>{{ $settlements->links() }}
     </div></div>
