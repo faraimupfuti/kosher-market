@@ -48,7 +48,10 @@ class BitcoinEscrowService
         if ($response->failed()) throw new RuntimeException('BTCPay invoice creation failed.');
 
         $invoice = $response->json();
-        $escrow->update(['btcpay_invoice_id' => $invoice['id'] ?? null, 'bitcoin_payment_address' => data_get($invoice, 'addresses.BTC')]);
+        $escrow->update([
+            'btcpay_invoice_id' => $invoice['id'] ?? null,
+            'bitcoin_payment_address' => data_get($invoice, 'addresses.BTC'),
+        ]);
         return $invoice;
     }
 
@@ -58,17 +61,24 @@ class BitcoinEscrowService
         if ($btcAmount + 0.00000001 < (float) $escrow->amount) throw new RuntimeException('Bitcoin payment is below the escrow amount.');
 
         return DB::transaction(function () use ($escrow, $txid, $confirmations, $btcAmount) {
-            $escrow->refresh();
+            $escrow = EscrowTransaction::whereKey($escrow->id)->lockForUpdate()->firstOrFail();
             if (in_array($escrow->status, ['released', 'refunded', 'cancelled'], true)) return $escrow;
             if ($escrow->bitcoin_txid && !hash_equals($escrow->bitcoin_txid, $txid)) throw new RuntimeException('Escrow already has a different transaction.');
+
             $escrow->update([
                 'status' => 'funded', 'bitcoin_txid' => $txid, 'bitcoin_amount' => $btcAmount,
-                'bitcoin_confirmations' => $confirmations, 'payment_detected_at' => $escrow->payment_detected_at ?: now(),
+                'bitcoin_confirmations' => $confirmations,
+                'payment_detected_at' => $escrow->payment_detected_at ?: now(),
                 'payment_confirmed_at' => now(), 'funded_at' => $escrow->funded_at ?: now(),
                 'release_due_at' => $escrow->release_due_at ?: now()->addDays((int) config('escrow.hold_days', 3)),
             ]);
+
             if (!$escrow->ledgerEntries()->where('reference', $txid)->exists()) {
-                EscrowLedgerEntry::create(['escrow_transaction_id' => $escrow->id, 'type' => 'escrow_funded', 'amount' => $btcAmount, 'currency' => 'BTC', 'reference' => $txid, 'metadata' => ['confirmations' => $confirmations]]);
+                EscrowLedgerEntry::create([
+                    'escrow_transaction_id' => $escrow->id, 'type' => 'escrow_funded',
+                    'amount' => $btcAmount, 'currency' => 'BTC', 'reference' => $txid,
+                    'metadata' => ['confirmations' => $confirmations],
+                ]);
             }
             return $escrow;
         });
@@ -77,10 +87,12 @@ class BitcoinEscrowService
     public function release(EscrowTransaction $escrow, ?string $note = null): EscrowTransaction
     {
         return DB::transaction(function () use ($escrow, $note) {
-            $escrow->refresh();
+            $escrow = EscrowTransaction::whereKey($escrow->id)->lockForUpdate()->firstOrFail();
             if ($escrow->status !== 'funded') throw new RuntimeException('Only funded escrow can be released.');
             $escrow->update(['status' => 'released', 'released_at' => now(), 'release_note' => $note]);
-            EscrowLedgerEntry::create(['escrow_transaction_id' => $escrow->id, 'type' => 'seller_payout_due', 'amount' => $escrow->seller_amount, 'currency' => 'BTC', 'reference' => 'ESCROW-'.$escrow->id]);
+            if (!$escrow->ledgerEntries()->where('type', 'seller_payout_due')->exists()) {
+                EscrowLedgerEntry::create(['escrow_transaction_id' => $escrow->id, 'type' => 'seller_payout_due', 'amount' => $escrow->seller_amount, 'currency' => 'BTC', 'reference' => 'ESCROW-'.$escrow->id]);
+            }
             return $escrow;
         });
     }
@@ -88,10 +100,12 @@ class BitcoinEscrowService
     public function refund(EscrowTransaction $escrow, ?string $note = null): EscrowTransaction
     {
         return DB::transaction(function () use ($escrow, $note) {
-            $escrow->refresh();
+            $escrow = EscrowTransaction::whereKey($escrow->id)->lockForUpdate()->firstOrFail();
             if (!in_array($escrow->status, ['funded', 'disputed'], true)) throw new RuntimeException('Only funded or disputed escrow can be refunded.');
             $escrow->update(['status' => 'refunded', 'refunded_at' => now(), 'refund_note' => $note]);
-            EscrowLedgerEntry::create(['escrow_transaction_id' => $escrow->id, 'type' => 'buyer_refund_due', 'amount' => $escrow->bitcoin_amount ?? $escrow->amount, 'currency' => 'BTC', 'reference' => 'REFUND-'.$escrow->id]);
+            if (!$escrow->ledgerEntries()->where('type', 'buyer_refund_due')->exists()) {
+                EscrowLedgerEntry::create(['escrow_transaction_id' => $escrow->id, 'type' => 'buyer_refund_due', 'amount' => $escrow->bitcoin_amount ?? $escrow->amount, 'currency' => 'BTC', 'reference' => 'REFUND-'.$escrow->id]);
+            }
             return $escrow;
         });
     }
