@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\BitcoinSettlement;
+use App\Models\BtcpayWebhookEvent;
 use App\Models\EscrowDispute;
 use App\Models\EscrowTransaction;
 use App\Models\Order;
@@ -62,28 +63,80 @@ class EscrowController extends Controller
 
     public function webhook(Request $request)
     {
-        $secret=(string)config('bitcoin.webhook_secret');$signature=(string)$request->header('BTCPay-Sig');
+        $rawBody = $request->getContent();
+        $secret=(string)config('bitcoin.webhook_secret');
+        $signature=(string)$request->header('BTCPay-Sig');
         if(!$secret||!$signature||!str_starts_with($signature,'sha256='))return response()->json(['message'=>'Invalid webhook signature.'],401);
-        $expected='sha256='.hash_hmac('sha256',$request->getContent(),$secret);if(!hash_equals($expected,$signature))return response()->json(['message'=>'Invalid webhook signature.'],401);
-        $payload=$request->json()->all();$type=$payload['type']??'';
-        if(in_array($type,['PayoutApproved','PayoutUpdated','PayoutSettled'],true)){
-            $payoutId=$payload['payoutId']??null;if($payoutId){$settlement=BitcoinSettlement::where('btcpay_payout_id',$payoutId)->first();if($settlement){try{$this->escrow->syncSettlement($settlement);}catch(Throwable $e){report($e);return response()->json(['message'=>'Unable to synchronize payout.'],502);}}}return response()->json(['received'=>true]);
-        }
-        $invoiceId=$payload['invoiceId']??null;if(!$invoiceId||!in_array($type,['InvoiceSettled','InvoicePaymentSettled'],true))return response()->json(['received'=>true]);
-        $baseUrl=rtrim((string)config('bitcoin.btcpay_url'),'/');$storeId=config('bitcoin.btcpay_store_id');$apiKey=config('bitcoin.btcpay_api_key');if(!$baseUrl||!$storeId||!$apiKey)return response()->json(['message'=>'Bitcoin gateway not configured.'],500);
-        $response=Http::timeout(20)->withToken($apiKey)->acceptJson()->get($baseUrl.'/api/v1/stores/'.$storeId.'/invoices/'.$invoiceId);if($response->failed())return response()->json(['message'=>'Unable to verify invoice.'],502);
-        $invoice=$response->json();if(($invoice['status']??'')!=='Settled')return response()->json(['received'=>true]);
+        $expected='sha256='.hash_hmac('sha256',$rawBody,$secret);
+        if(!hash_equals($expected,$signature))return response()->json(['message'=>'Invalid webhook signature.'],401);
 
-        $metadata=$invoice['metadata']??[];
-        if(($metadata['kosherMarketType']??null)==='vendor_registration_fee'){
-            $vendorId=(int)($metadata['vendorId']??0);$fee=$vendorId?VendorRegistrationFee::where('vendor_id',$vendorId)->where('btcpay_invoice_id',$invoiceId)->first():null;
-            if(!$fee)return response()->json(['received'=>true]);
-            $payment=data_get($invoice,'payments.0',[]);$txid=(string)($payment['transactionId']??$payment['id']??('btcpay-'.$invoiceId));$confirmations=(int)($payment['additionalStatus']['currentConfirmations']??$payment['additionalStatus']['confirmations']??config('bitcoin.required_confirmations',1));$btcAmount=data_get($payment,'value')??data_get($invoice,'paymentMethods.BTC.amount')??$fee->btc_amount;
-            try{$this->vendorFees->markPaid($fee,$txid,$confirmations,$btcAmount);}catch(Throwable $e){report($e);return response()->json(['message'=>'Unable to finalize vendor registration fee.'],422);}return response()->json(['received'=>true]);
+        $payload=$request->json()->all();
+        $type=(string)($payload['type']??'');
+        $deliveryId=$payload['deliveryId']??null;
+        $fingerprint=hash('sha256',$rawBody);
+        $invoiceId=$payload['invoiceId']??null;
+        $payoutId=$payload['payoutId']??null;
+
+        try {
+            $event=BtcpayWebhookEvent::firstOrCreate(
+                ['event_fingerprint'=>$fingerprint],
+                ['delivery_id'=>$deliveryId,'event_type'=>$type,'invoice_id'=>$invoiceId,'payout_id'=>$payoutId]
+            );
+        } catch (Throwable $e) {
+            report($e);
+            return response()->json(['message'=>'Unable to record webhook event.'],500);
         }
 
-        $escrowId=data_get($metadata,'escrowId');$escrow=$escrowId?EscrowTransaction::find($escrowId):null;if(!$escrow||($escrow->btcpay_invoice_id&&$escrow->btcpay_invoice_id!==$invoiceId))return response()->json(['received'=>true]);
-        $payment=data_get($invoice,'payments.0',[]);$txid=(string)($payment['transactionId']??$payment['id']??('btcpay-'.$invoiceId));$confirmations=(int)($payment['additionalStatus']['currentConfirmations']??$payment['additionalStatus']['confirmations']??config('bitcoin.required_confirmations',1));$btcAmount=data_get($payment,'value')??data_get($invoice,'paymentMethods.BTC.amount')??$escrow->amount;
-        $this->escrow->markFunded($escrow,$txid,$confirmations,$btcAmount);return response()->json(['received'=>true]);
+        if($event->processed_at) return response()->json(['received'=>true,'duplicate'=>true]);
+
+        try {
+            if(in_array($type,['PayoutApproved','PayoutUpdated','PayoutSettled'],true)){
+                if($payoutId){
+                    $settlement=BitcoinSettlement::where('btcpay_payout_id',$payoutId)->first();
+                    if($settlement)$this->escrow->syncSettlement($settlement);
+                }
+                $event->update(['processed_at'=>now(),'processing_error'=>null]);
+                return response()->json(['received'=>true]);
+            }
+
+            if(!$invoiceId||!in_array($type,['InvoiceSettled','InvoicePaymentSettled'],true)){
+                $event->update(['processed_at'=>now()]);
+                return response()->json(['received'=>true]);
+            }
+
+            $baseUrl=rtrim((string)config('bitcoin.btcpay_url'),'/');$storeId=config('bitcoin.btcpay_store_id');$apiKey=config('bitcoin.btcpay_api_key');
+            if(!$baseUrl||!$storeId||!$apiKey)throw new \RuntimeException('Bitcoin gateway not configured.');
+            $response=Http::timeout(20)->withToken($apiKey)->acceptJson()->get($baseUrl.'/api/v1/stores/'.$storeId.'/invoices/'.$invoiceId);
+            if($response->failed())throw new \RuntimeException('Unable to verify invoice.');
+            $invoice=$response->json();
+            if(($invoice['status']??'')!=='Settled'){
+                $event->update(['processed_at'=>now()]);
+                return response()->json(['received'=>true]);
+            }
+
+            $metadata=$invoice['metadata']??[];
+            if(($metadata['kosherMarketType']??null)==='vendor_registration_fee'){
+                $vendorId=(int)($metadata['vendorId']??0);$fee=$vendorId?VendorRegistrationFee::where('vendor_id',$vendorId)->where('btcpay_invoice_id',$invoiceId)->first():null;
+                if($fee){
+                    $payment=data_get($invoice,'payments.0',[]);$txid=(string)($payment['transactionId']??$payment['id']??('btcpay-'.$invoiceId));$confirmations=(int)($payment['additionalStatus']['currentConfirmations']??$payment['additionalStatus']['confirmations']??config('bitcoin.required_confirmations',1));$btcAmount=data_get($payment,'value')??data_get($invoice,'paymentMethods.BTC.amount')??$fee->btc_amount;
+                    $this->vendorFees->markPaid($fee,$txid,$confirmations,$btcAmount);
+                }
+                $event->update(['processed_at'=>now(),'processing_error'=>null]);
+                return response()->json(['received'=>true]);
+            }
+
+            $escrowId=data_get($metadata,'escrowId');$escrow=$escrowId?EscrowTransaction::find($escrowId):null;
+            if($escrow && (!$escrow->btcpay_invoice_id||$escrow->btcpay_invoice_id===$invoiceId)){
+                $payment=data_get($invoice,'payments.0',[]);$txid=(string)($payment['transactionId']??$payment['id']??('btcpay-'.$invoiceId));$confirmations=(int)($payment['additionalStatus']['currentConfirmations']??$payment['additionalStatus']['confirmations']??config('bitcoin.required_confirmations',1));$btcAmount=data_get($payment,'value')??data_get($invoice,'paymentMethods.BTC.amount')??$escrow->amount;
+                $this->escrow->markFunded($escrow,$txid,$confirmations,$btcAmount);
+            }
+
+            $event->update(['processed_at'=>now(),'processing_error'=>null]);
+            return response()->json(['received'=>true]);
+        } catch (Throwable $e) {
+            $event->update(['processing_error'=>substr($e->getMessage(),0,5000)]);
+            report($e);
+            return response()->json(['message'=>'Webhook processing failed; BTCPay may retry delivery.'],502);
+        }
     }
 }
