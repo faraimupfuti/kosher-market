@@ -23,6 +23,7 @@ use App\Http\Controllers\Admin\RefundController;
 use App\Http\Controllers\Admin\SocialMediaLinkController;
 use App\Http\Controllers\Admin\VendorController;
 use App\Http\Controllers\EscrowController;
+use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\SiteSettingsController;
 use Illuminate\Support\Facades\Route;
 
@@ -96,14 +97,12 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
 
-    // Escrow administration
     Route::get('escrow', [AdminEscrowController::class, 'index'])->name('escrow.index');
     Route::post('escrow/{escrow}/release', [AdminEscrowController::class, 'release'])->name('escrow.release');
     Route::post('escrow/{escrow}/refund', [AdminEscrowController::class, 'refund'])->name('escrow.refund');
     Route::post('escrow/disputes/{dispute}/resolve', [AdminEscrowController::class, 'resolveDispute'])->name('escrow.disputes.resolve');
 });
 
-// Bitcoin-only customer escrow API.
 Route::middleware('auth:customer')->prefix('escrow')->name('escrow.')->group(function () {
     Route::post('/orders/{order}', [EscrowController::class, 'create'])->name('create');
     Route::get('/{escrow}', [EscrowController::class, 'show'])->name('show');
@@ -112,13 +111,11 @@ Route::middleware('auth:customer')->prefix('escrow')->name('escrow.')->group(fun
     Route::post('/{escrow}/dispute', [EscrowController::class, 'dispute'])->name('dispute');
 });
 
-// BTCPay webhook is public but authenticated by its HMAC signature in the controller.
 Route::post('/bitcoin/btcpay/webhook', [EscrowController::class, 'webhook'])->name('bitcoin.btcpay.webhook');
+
+Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
+Route::post('/checkout/process', [CheckoutController::class, 'process'])->name('checkout.process');
 
 Route::get('site-settings', [SiteSettingsController::class, 'index'])->name('site-settings.index');
 Route::get('site-settings/edit', [SiteSettingsController::class, 'edit'])->name('admin.site-settings.edit');
 Route::put('site-settings/update', [SiteSettingsController::class, 'update'])->name('admin.site-settings.update');
-
-// Checkout remains available, but Bitcoin is the only supported escrow payment method.
-Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
-Route::post('/checkout/process', [CheckoutController::class, 'process'])->name('checkout.process');
