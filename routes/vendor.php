@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\LanguageController;
 use App\Http\Controllers\Vendor\Auth\AuthController;
+use App\Http\Controllers\Vendor\Auth\RegistrationController;
 use App\Http\Controllers\Vendor\BitcoinPayoutController;
 use App\Http\Controllers\Vendor\DashboardController;
 use App\Http\Controllers\Vendor\OrderController;
@@ -9,11 +10,14 @@ use App\Http\Controllers\Vendor\ProductController;
 use App\Http\Controllers\Vendor\ProductReviewController;
 use App\Http\Controllers\Vendor\ProfileController;
 use App\Http\Controllers\Vendor\SocialMediaLinkController;
+use App\Http\Controllers\VendorRegistrationFeeController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('vendor')->group(function () {
     Route::get('/login', [AuthController::class, 'showLoginForm'])->name('vendor.login');
     Route::post('/login', [AuthController::class, 'login'])->name('vendor.login.submit');
+    Route::get('/register', [RegistrationController::class, 'create'])->name('vendor.register');
+    Route::post('/register', [RegistrationController::class, 'store'])->middleware('throttle:vendor-register')->name('vendor.register.store');
     Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth.vendor')->name('vendor.logout');
 
     Route::middleware('auth.vendor')->group(function () {
@@ -33,8 +37,7 @@ Route::prefix('vendor')->group(function () {
         Route::post('/change-language', [LanguageController::class, 'changeLanguage'])->name('vendor.change.language');
         Route::get('profile/edit', [ProfileController::class, 'edit'])->name('vendor.profile.edit');
         Route::patch('profile', [ProfileController::class, 'update'])->name('vendor.profile.update');
-
-        // Bitcoin-only seller settlement
+        Route::get('registration-fee', [VendorRegistrationFeeController::class, 'show'])->name('vendor.registration-fee');
         Route::get('bitcoin/payout', [BitcoinPayoutController::class, 'edit'])->name('vendor.bitcoin.payout');
         Route::patch('bitcoin/payout', [BitcoinPayoutController::class, 'update'])->name('vendor.bitcoin.payout.update');
         Route::get('bitcoin/payouts', [BitcoinPayoutController::class, 'index'])->name('vendor.bitcoin.payouts');
