@@ -60,8 +60,6 @@ jobs:
           php-version: '8.3'
           extensions: mbstring, bcmath, sqlite, pdo_sqlite, pdo_mysql
           coverage: none
-      - uses: mysql/setup-mysql@v2
-        if: false
       - run: composer install --prefer-dist --no-progress --no-interaction
       - run: cp .env.example .env
       - run: php artisan key:generate
@@ -69,8 +67,7 @@ jobs:
         shell: bash
         run: |
           for i in {1..30}; do
-            if (echo > /dev/tcp/127.0.0.1/3306) >/dev/null 2>&1; then
-              echo "MySQL port is ready"
+            if php -r '$pdo = new PDO("mysql:host=127.0.0.1;port=3306;dbname=testing", "root", "root", [PDO::ATTR_TIMEOUT => 2]); echo "MySQL is ready\n";' 2>/dev/null; then
               exit 0
             fi
             echo "Waiting for MySQL..."
