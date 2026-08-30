@@ -12,7 +12,6 @@
         "laravel/tinker": "^2.8",
         "laravel/ui": "^4.6",
         "stripe/stripe-php": "^17.6",
-        "symfony/intl": "^6.0",
         "yajra/laravel-datatables-oracle": "^10.11"
     },
     "require-dev": {
