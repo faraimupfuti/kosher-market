@@ -11,4 +11,5 @@ return [
     'platform_fee_percent' => env('BITCOIN_PLATFORM_FEE_PERCENT', '3.00'),
     'admin_btc_address' => env('KOSHER_MARKET_ADMIN_BTC_ADDRESS'),
     'btc_invoice_currency' => env('BTCPAY_INVOICE_CURRENCY', 'USD'),
+    'auto_payouts' => filter_var(env('BITCOIN_AUTO_PAYOUTS', true), FILTER_VALIDATE_BOOL),
 ];
