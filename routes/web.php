@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AttributeController;
 use App\Http\Controllers\Admin\BannerController;
+use App\Http\Controllers\Admin\BitcoinSettlementController;
 use App\Http\Controllers\Admin\BrandController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\CustomerController;
@@ -100,6 +101,11 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::post('escrow/{escrow}/release', [AdminEscrowController::class, 'release'])->name('escrow.release');
     Route::post('escrow/{escrow}/refund', [AdminEscrowController::class, 'refund'])->name('escrow.refund');
     Route::post('escrow/disputes/{dispute}/resolve', [AdminEscrowController::class, 'resolveDispute'])->name('escrow.disputes.resolve');
+    Route::get('bitcoin/settlements', [BitcoinSettlementController::class, 'index'])->name('bitcoin.settlements.index');
+    Route::post('bitcoin/vendors/{vendor}/verify', [BitcoinSettlementController::class, 'verifyVendor'])->name('bitcoin.vendors.verify');
+    Route::post('bitcoin/settlements/{settlement}/destination', [BitcoinSettlementController::class, 'destination'])->name('bitcoin.settlements.destination');
+    Route::post('bitcoin/settlements/{settlement}/submit', [BitcoinSettlementController::class, 'submit'])->name('bitcoin.settlements.submit');
+    Route::post('bitcoin/settlements/{settlement}/sync', [BitcoinSettlementController::class, 'sync'])->name('bitcoin.settlements.sync');
 });
 
 Route::middleware('auth:customer')->prefix('escrow')->name('escrow.')->group(function () {
