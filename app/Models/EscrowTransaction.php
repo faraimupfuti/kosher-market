@@ -13,23 +13,16 @@ class EscrowTransaction extends Model
         'order_id', 'payment_id', 'buyer_id', 'vendor_id', 'amount',
         'platform_fee', 'seller_amount', 'currency', 'status',
         'funded_at', 'release_due_at', 'released_at', 'refunded_at',
-        'release_note', 'refund_note', 'bitcoin_payment_address',
-        'bitcoin_txid', 'bitcoin_amount', 'bitcoin_confirmations',
-        'payment_detected_at', 'payment_confirmed_at',
+        'release_note', 'refund_note', 'btcpay_invoice_id',
+        'bitcoin_payment_address', 'bitcoin_txid', 'bitcoin_amount',
+        'bitcoin_confirmations', 'payment_detected_at', 'payment_confirmed_at',
     ];
 
     protected $casts = [
-        'amount' => 'decimal:8',
-        'platform_fee' => 'decimal:8',
-        'seller_amount' => 'decimal:8',
-        'bitcoin_amount' => 'decimal:8',
-        'bitcoin_confirmations' => 'integer',
-        'funded_at' => 'datetime',
-        'release_due_at' => 'datetime',
-        'released_at' => 'datetime',
-        'refunded_at' => 'datetime',
-        'payment_detected_at' => 'datetime',
-        'payment_confirmed_at' => 'datetime',
+        'amount' => 'decimal:8', 'platform_fee' => 'decimal:8', 'seller_amount' => 'decimal:8',
+        'bitcoin_amount' => 'decimal:8', 'bitcoin_confirmations' => 'integer',
+        'funded_at' => 'datetime', 'release_due_at' => 'datetime', 'released_at' => 'datetime',
+        'refunded_at' => 'datetime', 'payment_detected_at' => 'datetime', 'payment_confirmed_at' => 'datetime',
     ];
 
     public function order() { return $this->belongsTo(Order::class); }
