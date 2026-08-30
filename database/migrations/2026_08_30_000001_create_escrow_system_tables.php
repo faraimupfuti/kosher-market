@@ -12,15 +12,20 @@ return new class extends Migration
             $table->id();
             $table->foreignId('order_id')->constrained('orders')->cascadeOnDelete();
             $table->foreignId('payment_id')->nullable()->constrained('payments')->nullOnDelete();
-            $table->foreignId('buyer_id')->constrained('users')->cascadeOnDelete();
-            $table->unsignedBigInteger('seller_id')->nullable()->index();
-            $table->decimal('amount', 15, 2);
-            $table->decimal('platform_fee', 15, 2)->default(0);
-            $table->decimal('seller_amount', 15, 2);
-            $table->string('currency', 10)->default('USD');
-            $table->enum('status', [
-                'pending', 'funded', 'processing', 'released', 'refunded', 'disputed', 'cancelled'
-            ])->default('pending');
+            $table->unsignedBigInteger('buyer_id')->index();
+            $table->unsignedBigInteger('vendor_id')->index();
+            $table->decimal('amount', 20, 8);
+            $table->decimal('platform_fee', 20, 8)->default(0);
+            $table->decimal('seller_amount', 20, 8);
+            $table->string('currency', 10)->default('BTC');
+            $table->string('status')->default('pending')->index();
+            $table->string('btcpay_invoice_id')->nullable()->unique();
+            $table->string('bitcoin_payment_address')->nullable();
+            $table->string('bitcoin_txid')->nullable()->index();
+            $table->decimal('bitcoin_amount', 20, 8)->nullable();
+            $table->unsignedInteger('bitcoin_confirmations')->default(0);
+            $table->timestamp('payment_detected_at')->nullable();
+            $table->timestamp('payment_confirmed_at')->nullable();
             $table->timestamp('funded_at')->nullable();
             $table->timestamp('release_due_at')->nullable();
             $table->timestamp('released_at')->nullable();
@@ -30,16 +35,16 @@ return new class extends Migration
             $table->timestamps();
             $table->unique('order_id');
             $table->index(['buyer_id', 'status']);
-            $table->index(['seller_id', 'status']);
+            $table->index(['vendor_id', 'status']);
         });
 
         Schema::create('escrow_ledger_entries', function (Blueprint $table) {
             $table->id();
             $table->foreignId('escrow_transaction_id')->constrained('escrow_transactions')->cascadeOnDelete();
-            $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->unsignedBigInteger('user_id')->nullable()->index();
             $table->string('type');
-            $table->decimal('amount', 15, 2);
-            $table->string('currency', 10)->default('USD');
+            $table->decimal('amount', 20, 8);
+            $table->string('currency', 10)->default('BTC');
             $table->string('reference')->nullable()->index();
             $table->json('metadata')->nullable();
             $table->timestamps();
@@ -48,11 +53,11 @@ return new class extends Migration
         Schema::create('escrow_disputes', function (Blueprint $table) {
             $table->id();
             $table->foreignId('escrow_transaction_id')->constrained('escrow_transactions')->cascadeOnDelete();
-            $table->foreignId('opened_by')->constrained('users')->cascadeOnDelete();
+            $table->unsignedBigInteger('opened_by')->index();
             $table->string('reason');
             $table->text('description');
-            $table->enum('status', ['open', 'under_review', 'resolved_buyer', 'resolved_seller', 'closed'])->default('open');
-            $table->foreignId('resolved_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->string('status')->default('open')->index();
+            $table->unsignedBigInteger('resolved_by')->nullable()->index();
             $table->text('resolution_note')->nullable();
             $table->timestamp('resolved_at')->nullable();
             $table->timestamps();
