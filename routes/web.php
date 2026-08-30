@@ -28,6 +28,7 @@ use App\Http\Controllers\EscrowController;
 use App\Http\Controllers\SiteSettingsController;
 use App\Http\Controllers\Vendor\BitcoinPayoutController;
 use App\Http\Controllers\Vendor\BitcoinPayoutVerificationController;
+use App\Http\Controllers\Vendor\OrderShippingController;
 use App\Http\Controllers\Vendor\ProductShippingController;
 use App\Http\Controllers\Vendor\ShippingController;
 use App\Http\Controllers\VendorRegistrationFeeController;
@@ -124,6 +125,7 @@ Route::middleware('auth:vendor')->prefix('vendor')->name('vendor.')->group(funct
     Route::delete('/shipping/rates/{rate}', [ShippingController::class, 'destroyRate'])->name('shipping.rates.destroy');
     Route::get('/products/{product}/shipping', [ProductShippingController::class, 'index'])->name('products.shipping');
     Route::put('/products/{product}/shipping', [ProductShippingController::class, 'update'])->name('products.shipping.update');
+    Route::put('/orders/{order}/shipping', [OrderShippingController::class, 'update'])->name('orders.shipping.update');
     Route::get('/bitcoin/payout-address', [BitcoinPayoutController::class, 'edit'])->name('bitcoin.payout.edit');
     Route::put('/bitcoin/payout-address', [BitcoinPayoutController::class, 'update'])->name('bitcoin.payout.update');
     Route::get('/bitcoin/payouts', [BitcoinPayoutController::class, 'index'])->name('bitcoin.payouts');
