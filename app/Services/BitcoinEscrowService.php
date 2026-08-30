@@ -6,6 +6,7 @@ use App\Models\BitcoinSettlement;
 use App\Models\EscrowLedgerEntry;
 use App\Models\EscrowTransaction;
 use App\Models\Order;
+use App\Models\PlatformRevenueEntry;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
@@ -91,12 +92,34 @@ class BitcoinEscrowService
     public function release(EscrowTransaction $escrow, ?string $note = null): EscrowTransaction
     {
         return DB::transaction(function () use ($escrow, $note) {
-            $escrow = EscrowTransaction::with('vendor')->whereKey($escrow->id)->lockForUpdate()->firstOrFail();
+            $escrow = EscrowTransaction::with('vendor', 'order')->whereKey($escrow->id)->lockForUpdate()->firstOrFail();
             if ($escrow->status !== 'funded') throw new RuntimeException('Only funded escrow can be released.');
             if (!$escrow->vendor?->bitcoin_payout_address) throw new RuntimeException('Vendor has not configured a Bitcoin payout address.');
             if (!$escrow->vendor?->bitcoin_payout_address_verified_at) throw new RuntimeException('Vendor Bitcoin payout address must be verified before release.');
+
+            $feeSatoshis = $this->btcToSatoshis($escrow->platform_fee);
+            $reference = 'SALE-COMMISSION-ESCROW-'.$escrow->id;
+
             $escrow->update(['status' => 'released', 'released_at' => now(), 'release_note' => $note]);
-            if (!$escrow->ledgerEntries()->where('type', 'seller_payout_due')->exists()) EscrowLedgerEntry::create(['escrow_transaction_id' => $escrow->id, 'type' => 'seller_payout_due', 'amount' => $escrow->seller_amount, 'currency' => 'BTC', 'reference' => 'ESCROW-'.$escrow->id]);
+            if (!$escrow->ledgerEntries()->where('type', 'seller_payout_due')->exists()) {
+                EscrowLedgerEntry::create(['escrow_transaction_id' => $escrow->id, 'type' => 'seller_payout_due', 'amount' => $escrow->seller_amount, 'currency' => 'BTC', 'reference' => 'ESCROW-'.$escrow->id]);
+            }
+
+            PlatformRevenueEntry::firstOrCreate(
+                ['reference' => $reference],
+                [
+                    'type' => 'sale_commission',
+                    'vendor_id' => $escrow->vendor_id,
+                    'order_id' => $escrow->order_id,
+                    'escrow_transaction_id' => $escrow->id,
+                    'amount_btc' => $this->satoshisToBtc($feeSatoshis),
+                    'amount_satoshis' => $feeSatoshis,
+                    'status' => 'earned',
+                    'description' => '3% Kosher Market commission earned when escrow was released.',
+                    'earned_at' => now(),
+                ]
+            );
+
             BitcoinSettlement::firstOrCreate(['escrow_transaction_id' => $escrow->id, 'type' => 'seller_payout'], ['vendor_id' => $escrow->vendor_id, 'amount' => $escrow->seller_amount, 'currency' => 'BTC', 'destination_address' => $escrow->vendor->bitcoin_payout_address, 'status' => 'pending']);
             return $escrow;
         });
