@@ -17,7 +17,7 @@ Route::prefix('vendor')->group(function () {
     Route::get('/login', [AuthController::class, 'showLoginForm'])->name('vendor.login');
     Route::post('/login', [AuthController::class, 'login'])->name('vendor.login.submit');
     Route::get('/register', [RegistrationController::class, 'create'])->name('vendor.register');
-    Route::post('/register', [RegistrationController::class, 'store'])->middleware('throttle:vendor-register')->name('vendor.register.store');
+    Route::post('/register', [RegistrationController::class, 'store'])->name('vendor.register.store');
     Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth.vendor')->name('vendor.logout');
 
     Route::middleware('auth.vendor')->group(function () {
