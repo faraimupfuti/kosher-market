@@ -26,6 +26,7 @@ use App\Http\Controllers\Admin\VendorController;
 use App\Http\Controllers\BitcoinCheckoutController;
 use App\Http\Controllers\EscrowController;
 use App\Http\Controllers\SiteSettingsController;
+use App\Http\Controllers\VendorRegistrationFeeController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/login', function () { return view('admin.auth.login'); });
@@ -107,6 +108,10 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::post('bitcoin/settlements/{settlement}/submit', [BitcoinSettlementController::class, 'submit'])->name('bitcoin.settlements.submit');
     Route::post('bitcoin/settlements/{settlement}/approve', [BitcoinSettlementController::class, 'approve'])->name('bitcoin.settlements.approve');
     Route::post('bitcoin/settlements/{settlement}/sync', [BitcoinSettlementController::class, 'sync'])->name('bitcoin.settlements.sync');
+});
+
+Route::middleware('auth:vendor')->prefix('vendor')->name('vendor.')->group(function () {
+    Route::get('/registration-fee', [VendorRegistrationFeeController::class, 'show'])->name('registration-fee');
 });
 
 Route::middleware('auth:customer')->prefix('escrow')->name('escrow.')->group(function () {
