@@ -134,6 +134,7 @@ Route::post('/bitcoin/btcpay/webhook', [EscrowController::class, 'webhook'])->na
 
 Route::middleware('auth:customer')->group(function () {
     Route::get('/checkout', [BitcoinCheckoutController::class, 'index'])->name('checkout.index');
+    Route::get('/checkout/shipping-options', [BitcoinCheckoutController::class, 'shippingOptions'])->name('checkout.shipping-options');
     Route::post('/checkout/process', [BitcoinCheckoutController::class, 'process'])->name('checkout.process');
 });
 
