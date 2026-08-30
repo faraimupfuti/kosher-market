@@ -7,6 +7,7 @@ use App\Models\EscrowDispute;
 use App\Models\EscrowTransaction;
 use App\Models\Order;
 use App\Models\VendorRegistrationFee;
+use App\Services\AutomaticBitcoinPayoutService;
 use App\Services\BitcoinEscrowService;
 use App\Services\VendorRegistrationFeeService;
 use Illuminate\Http\Request;
@@ -40,11 +41,14 @@ class EscrowController extends Controller
         catch (Throwable $e) { report($e); return response()->json(['message' => 'Unable to create the Bitcoin payment.'], 502); }
     }
 
-    public function confirmReceipt(EscrowTransaction $escrow)
+    public function confirmReceipt(EscrowTransaction $escrow, AutomaticBitcoinPayoutService $payouts)
     {
         $customer = Auth::guard('customer')->user(); abort_unless($customer && (int) $escrow->buyer_id === (int) $customer->id, 403);
-        try { $this->escrow->release($escrow, 'Buyer confirmed receipt.'); return response()->json(['success'=>true,'status'=>'released']); }
-        catch (Throwable $e) { return response()->json(['message'=>$e->getMessage()],422); }
+        try {
+            $released = $this->escrow->release($escrow, 'Buyer confirmed receipt.');
+            $settlement = $payouts->forReleasedEscrow($released->fresh());
+            return response()->json(['success'=>true,'status'=>'released','settlement'=>$settlement]);
+        } catch (Throwable $e) { report($e); return response()->json(['message'=>$e->getMessage()],422); }
     }
 
     public function dispute(Request $request, EscrowTransaction $escrow)
