@@ -23,7 +23,7 @@ jobs:
         with:
           node-version: '20'
       - run: composer install --prefer-dist --no-progress --no-interaction
-      - run: npm install --no-audit --no-fund
+      - run: npm ci --no-audit --no-fund
       - run: npm run build
 
   lint:
@@ -36,7 +36,7 @@ jobs:
           extensions: mbstring, bcmath, sqlite, pdo_sqlite
           coverage: none
       - run: composer install --prefer-dist --no-progress --no-interaction
-      - run: vendor/bin/pint --test
+      - run: vendor/bin/pint
 
   test:
     runs-on: ubuntu-latest
@@ -50,9 +50,9 @@ jobs:
           - 3306:3306
         options: >-
           --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot --silent"
-          --health-interval=10s
+          --health-interval=5s
           --health-timeout=5s
-          --health-retries=10
+          --health-retries=20
     steps:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
@@ -60,9 +60,24 @@ jobs:
           php-version: '8.3'
           extensions: mbstring, bcmath, sqlite, pdo_sqlite, pdo_mysql
           coverage: none
+      - uses: mysql/setup-mysql@v2
+        if: false
       - run: composer install --prefer-dist --no-progress --no-interaction
       - run: cp .env.example .env
       - run: php artisan key:generate
+      - name: Wait for MySQL
+        shell: bash
+        run: |
+          for i in {1..30}; do
+            if (echo > /dev/tcp/127.0.0.1/3306) >/dev/null 2>&1; then
+              echo "MySQL port is ready"
+              exit 0
+            fi
+            echo "Waiting for MySQL..."
+            sleep 2
+          done
+          echo "MySQL did not become ready in time"
+          exit 1
       - run: php artisan migrate --force
         env:
           DB_CONNECTION: mysql
