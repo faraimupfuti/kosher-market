@@ -1,31 +1,39 @@
-# Kosher Market production container
-FROM php:8.3-cli
+# syntax=docker/dockerfile:1
 
+# Build frontend assets with a pinned Node toolchain.
+FROM node:20-bookworm-slim AS frontend
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci --no-audit --no-fund
+COPY resources ./resources
+COPY public ./public
+COPY vite.config.js .
+RUN npm run build
+
+# Install production PHP dependencies without requiring PHP in the final Node stage.
+FROM composer:2 AS vendor
+WORKDIR /app
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader --no-progress --no-scripts
+
+# Kosher Market runtime image.
+FROM php:8.3-cli
 WORKDIR /var/www/html
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    git unzip curl libzip-dev libpng-dev libjpeg62-turbo-dev libfreetype6-dev \
+    libzip-dev libpng-dev libjpeg62-turbo-dev libfreetype6-dev \
     libicu-dev libxml2-dev libonig-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j"$(nproc)" bcmath exif gd intl mbstring pcntl pdo_mysql zip \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
-COPY --from=node:20-bookworm-slim /usr/local/bin/node /usr/local/bin/node
-COPY --from=node:20-bookworm-slim /usr/local/lib/node_modules /usr/local/lib/node_modules
-RUN ln -sf /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm
-
-COPY composer.json composer.lock ./
-RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader --no-progress
-
-COPY package.json ./
-RUN npm install --no-audit --no-fund
-
+COPY --from=vendor /app/vendor ./vendor
 COPY . .
-RUN npm run build && rm -rf node_modules
+COPY --from=frontend /app/public/build ./public/build
 
 RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache \
+    && php artisan package:discover --ansi \
     && php artisan config:clear \
     && php artisan route:clear \
     && php artisan view:clear
