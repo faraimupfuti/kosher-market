@@ -17,13 +17,8 @@ class Product extends Model
 
     protected static function booted(): void
     {
-        static::creating(function (Product $product) {
-            $product->currency = 'BTC';
-        });
-
-        static::updating(function (Product $product) {
-            $product->currency = 'BTC';
-        });
+        static::creating(function (Product $product) { $product->currency = 'BTC'; });
+        static::updating(function (Product $product) { $product->currency = 'BTC'; });
     }
 
     public function translations() { return $this->hasMany(ProductTranslation::class); }
@@ -32,13 +27,7 @@ class Product extends Model
     public function images() { return $this->hasMany(ProductImage::class); }
     public function brand() { return $this->belongsTo(Brand::class); }
     public function orders() { return $this->hasMany(Order::class); }
-
-    public function getTranslation($field, $locale = 'en')
-    {
-        $translation = $this->translations->firstWhere('language_code', $locale);
-        return $translation ? $translation->$field : null;
-    }
-
+    public function getTranslation($field, $locale = 'en') { $translation = $this->translations->firstWhere('language_code', $locale); return $translation ? $translation->$field : null; }
     public function thumbnail() { return $this->hasOne(ProductImage::class)->where('type', 'thumb'); }
     public function reviews() { return $this->hasMany(ProductReview::class)->approved()->latest(); }
     public function averageRating() { return $this->reviews()->avg('rating') ?: 0; }
@@ -48,4 +37,5 @@ class Product extends Model
     public function attributeValues() { return $this->belongsToMany(AttributeValue::class, 'product_attribute_values')->with('attribute', 'translations'); }
     public function primaryVariant() { return $this->hasOne(ProductVariant::class)->where('is_primary', true); }
     public function wishlistedBy() { return $this->belongsToMany(Customer::class, 'wishlists'); }
+    public function shippingCountries() { return $this->belongsToMany(Country::class, 'product_shipping_countries'); }
 }
