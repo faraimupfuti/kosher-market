@@ -18,6 +18,13 @@ spec:
       labels:
         app: kosher-market-web
     spec:
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app: kosher-market-web
       containers:
         - name: web
           image: ghcr.io/faraimupfuti/kosher-market:latest
