@@ -11,7 +11,7 @@ class VendorRegistrationFee extends Model
 
     protected $fillable = [
         'vendor_id','currency','usd_amount','btc_amount','btc_satoshis','status',
-        'btcpay_invoice_id','bitcoin_txid','bitcoin_payment_address',
+        'btcpay_invoice_id','checkout_url','bitcoin_txid','bitcoin_payment_address',
         'bitcoin_confirmations','payment_detected_at','paid_at','error_message',
     ];
 
