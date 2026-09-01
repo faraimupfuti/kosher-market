@@ -37,12 +37,22 @@ final class BitcoinAmount
 
     public static function percentOf(int $satoshis, string $percent): int
     {
-        if ($satoshis < 0 || !preg_match('/^(?:0|\d+)(?:\.\d{1,4})?$/', trim($percent))) {
+        $percent = trim($percent);
+        if ($satoshis < 0 || !preg_match('/^(?:0|\d+)(?:\.\d{1,4})?$/', $percent)) {
             throw new InvalidArgumentException('Invalid fee calculation.');
         }
 
-        [$whole, $fraction] = array_pad(explode('.', trim($percent), 2), 2, '');
+        [$whole, $fraction] = array_pad(explode('.', $percent, 2), 2, '');
         $percentBasisPoints = ((int) $whole * 10_000) + (int) str_pad($fraction, 4, '0');
-        return intdiv(($satoshis * $percentBasisPoints) + 5000, 10_000 * 100);
+        $fee = intdiv(($satoshis * $percentBasisPoints) + 5000, 10_000 * 100);
+
+        // A positive fee on a positive transaction cannot be represented as a
+        // fractional satoshi. Charge the minimum representable amount instead
+        // of silently producing a zero-satoshi platform fee.
+        if ($satoshis > 0 && $percentBasisPoints > 0 && $fee === 0) {
+            return 1;
+        }
+
+        return $fee;
     }
 }
