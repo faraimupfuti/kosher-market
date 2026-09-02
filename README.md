@@ -68,6 +68,8 @@ Payout       ▼         ▼
 
 The following instructions are for Ubuntu development/testing. Do **not** use real Bitcoin while testing the escrow and payout system.
 
+### Option A — native Ubuntu PHP/MySQL setup
+
 ### 1. Install system packages
 
 For Ubuntu systems using the standard PHP packages available to your release:
@@ -233,6 +235,83 @@ Redis should be running if your local `.env` config uses Redis:
 sudo systemctl enable --now redis-server
 ```
 
+## Docker Compose local development
+
+Docker is the recommended way to reproduce the application stack without installing PHP/MySQL directly on Ubuntu. The repository includes `docker-compose.yml` with:
+
+- Laravel/PHP application
+- MySQL 8
+- Redis 7
+- persistent Docker volumes for MySQL, Redis and Laravel storage
+- health checks and dependency ordering
+- application networking
+
+Install Docker Engine and Compose on Ubuntu, then verify:
+
+```bash
+docker --version
+docker compose version
+```
+
+From the repository root:
+
+```bash
+cp .env.example .env
+```
+
+You can use the Docker-specific template instead if you prefer:
+
+```bash
+cp .env.docker.example .env
+```
+
+The Compose stack overrides the database host and credentials with its internal MySQL service values, so **do not change `DB_HOST` to `127.0.0.1` when running the Compose stack**. The application connects to the service named `mysql`.
+
+Build and start the stack:
+
+```bash
+docker compose up -d --build
+```
+
+Check the containers:
+
+```bash
+docker compose ps
+```
+
+Follow the application logs:
+
+```bash
+docker compose logs -f app
+```
+
+The application is available at:
+
+```text
+http://localhost:8000
+```
+
+The MySQL host port is `3307` and the Redis host port is `6380` to avoid conflicts with native Ubuntu services. Inside Docker, Laravel uses `mysql:3306` and `redis:6379`.
+
+Useful commands:
+
+```bash
+docker compose exec app php artisan about
+docker compose exec app php artisan migrate:status
+docker compose exec app php artisan test
+docker compose down
+```
+
+To remove the development database and Redis data as well:
+
+```bash
+docker compose down -v
+```
+
+**Warning:** `docker compose down -v` permanently deletes the named development volumes, including the local MySQL data.
+
+The Docker stack is intended for local development/testing. Do not put production BTCPay credentials, wallet secrets or real customer funds into this environment.
+
 ## Local testing
 
 Run the automated test suite with:
@@ -297,13 +376,11 @@ Before accepting real Bitcoin, verify:
 
 **Do not use the application to hold real Bitcoin until the complete deployment, wallet, webhook, payout and recovery procedures have been independently tested.**
 
-## Docker
-
-The repository is intended to support containerized development/deployment. When using Docker, ensure the Laravel application, queue workers, scheduler, Redis and MySQL services are configured consistently with the same application environment.
-
 ## Kubernetes
 
-The target architecture supports running the database service inside Kubernetes with persistent storage:
+The repository includes Kubernetes manifests for the target architecture, including a MySQL StatefulSet with persistent storage, Redis, web, worker, scheduler, ingress, HPA, PDB, network policy, migration job and backup configuration.
+
+The target architecture is:
 
 ```text
                     Ingress
@@ -322,7 +399,7 @@ The target architecture supports running the database service inside Kubernetes 
          Scheduler
 ```
 
-Before production use, configure persistent volumes, readiness/liveness probes, resource requests/limits, PodDisruptionBudgets, database backups, secrets management and a tested restore procedure.
+Before production use, configure persistent volumes, readiness/liveness probes, resource requests/limits, PodDisruptionBudgets, database backups, secrets management and a tested restore procedure. Kubernetes should be validated against a staging cluster before production traffic is enabled.
 
 ## CI
 
