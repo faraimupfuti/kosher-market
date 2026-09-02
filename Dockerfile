@@ -16,8 +16,8 @@ RUN npm run build
 FROM php:8.3-cli AS vendor
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    git unzip libzip-dev libicu-dev libonig-dev \
-    && docker-php-ext-install -j"$(nproc)" bcmath intl mbstring pdo_mysql zip \
+    git unzip libzip-dev libicu-dev libonig-dev libxml2-dev \
+    && docker-php-ext-install -j"$(nproc)" bcmath intl mbstring pdo_mysql xml zip \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 COPY composer.json composer.lock ./
@@ -31,7 +31,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libzip-dev libpng-dev libjpeg62-turbo-dev libfreetype6-dev \
     libicu-dev libxml2-dev libonig-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install -j"$(nproc)" bcmath exif gd intl mbstring pcntl pdo_mysql zip \
+    && docker-php-ext-install -j"$(nproc)" bcmath exif gd intl mbstring pcntl pdo_mysql xml zip \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=vendor /app/vendor ./vendor
