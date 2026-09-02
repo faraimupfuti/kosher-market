@@ -24,35 +24,19 @@ Kosher Market is a Laravel-based marketplace designed around one simple principl
 ## Transaction lifecycle
 
 ```text
-Buyer
-  │
-  ▼
-Bitcoin Checkout
-  │
-  ▼
-BTCPay Invoice
-  │
-  ▼
-Bitcoin Payment
-  │
-  ▼
-Escrow Funded
-  │
-  ├───────────────┐
-  │               │
-  ▼               ▼
-Receipt         Dispute
-  │               │
-  ▼               ▼
-Release         Admin Review
-  │               │
-  ▼          ┌────┴────┐
-Payout       ▼         ▼
-          Release    Refund
-             │         │
-             └────┬────┘
-                  ▼
-             Settlement
+Buyer → Bitcoin Checkout → BTCPay Invoice → Bitcoin Payment → Escrow Funded
+                                                   │
+                                    ┌──────────────┴──────────────┐
+                                    ▼                             ▼
+                                 Receipt                       Dispute
+                                    │                             │
+                                    ▼                             ▼
+                                  Release                    Admin Review
+                                    │                       ┌─────┴─────┐
+                                    ▼                       ▼           ▼
+                                  Payout                 Release      Refund
+                                                              \       /
+                                                               Settlement
 ```
 
 ## Technology
@@ -62,7 +46,8 @@ Payout       ▼         ▼
 - **Database:** MySQL 8-compatible relational database
 - **Bitcoin payments:** BTCPay Server
 - **Authentication:** Laravel authentication stack
-- **Deployment:** Docker, Kubernetes and compatible hosting
+- **Local containers:** Podman + Podman Compose
+- **Production orchestration:** Kubernetes
 
 ## Ubuntu local installation
 
@@ -70,9 +55,7 @@ The following instructions are for Ubuntu development/testing. Do **not** use re
 
 ### Option A — native Ubuntu PHP/MySQL setup
 
-### 1. Install system packages
-
-For Ubuntu systems using the standard PHP packages available to your release:
+Install the required packages:
 
 ```bash
 sudo apt update
@@ -81,20 +64,16 @@ sudo apt install -y git curl unzip mysql-server redis-server \
   php-curl php-xml php-zip php-intl
 ```
 
-`php-xml` is important: it provides the DOM and XML extensions required by Composer packages and PHPUnit.
+`php-xml` provides the DOM and XML extensions required by Composer packages and PHPUnit.
 
-Check PHP and the required extensions:
+Check PHP/extensions:
 
 ```bash
 php -v
 php -m | grep -E 'dom|xml|mbstring|bcmath|curl|intl|mysqli|pdo_mysql|pdo_sqlite|zip'
 ```
 
-If your Ubuntu installation uses a versioned PHP package, install the matching XML package, for example `php8.4-xml`, rather than mixing PHP versions.
-
-### 2. Install Composer
-
-If Composer is not already installed:
+Install Composer if necessary:
 
 ```bash
 php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
@@ -103,253 +82,211 @@ rm composer-setup.php
 composer --version
 ```
 
-### 3. Install Node.js/npm
-
-Kosher Market uses Vite for the frontend build. Use a supported LTS Node.js release for local development.
-
-Verify:
+Install/use a supported Node.js LTS release and verify:
 
 ```bash
 node --version
 npm --version
 ```
 
-### 4. Clone the repository
+Clone the repository:
 
 ```bash
 git clone https://github.com/faraimupfuti/kosher-market.git
 cd kosher-market
 ```
 
-### 5. Install Laravel dependencies
+Install dependencies:
 
 ```bash
 composer install
-```
-
-If Composer reports missing `ext-dom` or `ext-xml`, install `php-xml` and rerun `composer install`. Do **not** use `--ignore-platform-req` as the normal solution.
-
-### 6. Install frontend dependencies
-
-```bash
 npm ci
 ```
 
-### 7. Configure the environment
+If Composer reports missing `ext-dom` or `ext-xml`, install `php-xml` and rerun Composer. Do **not** use `--ignore-platform-req` as the normal solution.
+
+Configure Laravel:
 
 ```bash
 cp .env.example .env
 php artisan key:generate
 ```
 
-Edit `.env` and configure at minimum:
+Configure MySQL, Redis and BTCPay values in `.env`. Never commit `.env`, API credentials, wallet credentials, private keys or webhook secrets.
 
-```dotenv
-APP_ENV=local
-APP_DEBUG=true
-APP_URL=http://127.0.0.1:8000
-
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=kosher_market
-DB_USERNAME=kosher_market
-DB_PASSWORD=change-this-password
-```
-
-Configure Redis and BTCPay variables according to the environment being tested. Never commit `.env`, Bitcoin API credentials, wallet credentials, private keys or webhook secrets.
-
-### 8. Create the local MySQL database
-
-Example:
-
-```bash
-sudo mysql
-```
-
-Then:
+Create the local database if required:
 
 ```sql
 CREATE DATABASE kosher_market CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 CREATE USER 'kosher_market'@'localhost' IDENTIFIED BY 'change-this-password';
 GRANT ALL PRIVILEGES ON kosher_market.* TO 'kosher_market'@'localhost';
 FLUSH PRIVILEGES;
-EXIT;
 ```
 
-### 9. Run migrations
+Run the application:
 
 ```bash
 php artisan migrate
-```
-
-If seed data is provided and you specifically want the development seed data:
-
-```bash
-php artisan migrate:fresh --seed
-```
-
-Do not run `migrate:fresh` against a database containing data you need to preserve.
-
-### 10. Build the frontend
-
-```bash
 npm run build
+php artisan serve --host=127.0.0.1 --port=8000
 ```
 
-For development with Vite hot reload:
+For frontend hot reload:
 
 ```bash
 npm run dev
 ```
 
-### 11. Start Laravel
-
-```bash
-php artisan serve --host=127.0.0.1 --port=8000
-```
-
-Open:
-
-```text
-http://127.0.0.1:8000
-```
-
-### 12. Run the queue worker
-
-In a second terminal:
+In separate terminals, run workers/scheduler as needed:
 
 ```bash
 php artisan queue:work
-```
-
-For scheduler-driven tasks during development:
-
-```bash
 php artisan schedule:work
 ```
 
-Redis should be running if your local `.env` config uses Redis:
+## Podman local development — recommended container workflow
+
+**Podman is the recommended container runtime for local development. Docker is not required.** The repository provides `Containerfile.local` and `podman-compose.yml` for the complete Laravel stack.
+
+### 1. Install Podman on Ubuntu
 
 ```bash
-sudo systemctl enable --now redis-server
+sudo apt update
+sudo apt install -y podman podman-compose
 ```
 
-## Docker Compose local development
-
-Docker is the recommended way to reproduce the application stack without installing PHP/MySQL directly on Ubuntu. The repository includes `docker-compose.yml` with:
-
-- Laravel/PHP application
-- MySQL 8
-- Redis 7
-- persistent Docker volumes for MySQL, Redis and Laravel storage
-- health checks and dependency ordering
-- application networking
-
-Install Docker Engine and Compose on Ubuntu, then verify:
+Verify:
 
 ```bash
-docker --version
-docker compose version
+podman --version
+podman-compose --version
 ```
+
+### 2. Configure the environment
 
 From the repository root:
 
 ```bash
-cp .env.example .env
+cp .env.podman.example .env
+php -r 'echo "APP_KEY=" . base64_encode(random_bytes(32)) . PHP_EOL;'
 ```
 
-You can use the Docker-specific template instead if you prefer:
+For Laravel, generate the application key inside the application container after the image is built:
 
 ```bash
-cp .env.docker.example .env
+podman-compose -f podman-compose.yml run --rm app php artisan key:generate --force
 ```
 
-The Compose stack overrides the database host and credentials with its internal MySQL service values, so **do not change `DB_HOST` to `127.0.0.1` when running the Compose stack**. The application connects to the service named `mysql`.
+If `.env` already contains a valid `APP_KEY`, keep it.
 
-Build and start the stack:
+### 3. Build and start the stack
 
 ```bash
-docker compose up -d --build
+podman-compose -f podman-compose.yml build
+podman-compose -f podman-compose.yml up -d
 ```
 
-Check the containers:
+The stack contains:
+
+- Laravel/PHP application
+- MySQL 8
+- Redis 7
+- Laravel queue worker
+- Laravel scheduler
+- Persistent MySQL, Redis and Laravel storage volumes
+
+Check services:
 
 ```bash
-docker compose ps
+podman-compose -f podman-compose.yml ps
 ```
 
-Follow the application logs:
+View logs:
 
 ```bash
-docker compose logs -f app
+podman-compose -f podman-compose.yml logs -f app
 ```
 
-The application is available at:
+The marketplace is available at:
 
 ```text
 http://localhost:8000
 ```
 
-The MySQL host port is `3307` and the Redis host port is `6380` to avoid conflicts with native Ubuntu services. Inside Docker, Laravel uses `mysql:3306` and `redis:6379`.
+MySQL is exposed on host port `3307` and Redis on host port `6380`. Inside the Podman network Laravel uses `mysql:3306` and `redis:6379`.
 
 Useful commands:
 
 ```bash
-docker compose exec app php artisan about
-docker compose exec app php artisan migrate:status
-docker compose exec app php artisan test
-docker compose down
+podman-compose -f podman-compose.yml exec app php artisan about
+podman-compose -f podman-compose.yml exec app php artisan migrate:status
+podman-compose -f podman-compose.yml exec app php artisan test
+podman-compose -f podman-compose.yml exec app php artisan optimize
+podman-compose -f podman-compose.yml down
 ```
 
-To remove the development database and Redis data as well:
+To remove the development database and Redis data:
 
 ```bash
-docker compose down -v
+podman-compose -f podman-compose.yml down -v
 ```
 
-**Warning:** `docker compose down -v` permanently deletes the named development volumes, including the local MySQL data.
+**Warning:** `down -v` permanently deletes the development volumes, including local MySQL data.
 
-The Docker stack is intended for local development/testing. Do not put production BTCPay credentials, wallet secrets or real customer funds into this environment.
+The Podman stack is strictly for local development/testing. Never place production wallet secrets or real customer funds in it.
+
+### Podman without Podman Compose
+
+The project can also be built directly with Podman:
+
+```bash
+podman build -f Containerfile.local -t kosher-market:local .
+```
+
+For the complete multi-service environment, use `podman-compose.yml`.
 
 ## Local testing
 
-Run the automated test suite with:
+Run the automated test suite:
 
 ```bash
 php artisan test
 ```
 
-Check the application configuration with:
+Inside the Podman application container:
+
+```bash
+podman-compose -f podman-compose.yml exec app php artisan test
+```
+
+Check application configuration:
 
 ```bash
 php artisan about
 ```
 
-For a clean test database, use the test environment rather than your development database.
-
 ## Bitcoin / BTCPay Server
 
 Kosher Market uses the application layer to coordinate orders, escrow state, disputes and settlement records. Bitcoin wallet custody and transaction signing must remain outside the Laravel web application.
 
-Required Bitcoin infrastructure for an integration environment:
+Required integration infrastructure:
 
-- A running BTCPay Server instance
-- A Bitcoin wallet configured in BTCPay
-- A dedicated BTCPay store for Kosher Market
-- A restricted BTCPay API key with only required permissions
-- A BTCPay webhook configured for the marketplace
+- Running BTCPay Server instance
+- Bitcoin wallet configured in BTCPay
+- Dedicated BTCPay store for Kosher Market
+- Restricted BTCPay API key with only required permissions
+- Marketplace BTCPay webhook
 
-For local/integration testing, use Bitcoin testnet or another explicitly non-production environment where supported by your BTCPay setup. Never place a Bitcoin seed phrase or private key in `.env` or source control.
+For local/integration testing, use Bitcoin testnet or another explicitly non-production environment where supported. Never place a Bitcoin seed phrase or private key in `.env` or source control.
 
 ## Financial workflow
 
 The intended marketplace financial model includes:
 
-1. A vendor registration fee of **USD 200 equivalent in BTC**, subject to the configured exchange-rate policy.
-2. Automatic vendor activation only after the registration payment has been independently verified.
-3. A **3% platform commission** on eligible completed vendor sales.
-4. The remaining vendor entitlement becomes eligible for payout according to the escrow/release policy.
+1. Vendor registration fee of **USD 200 equivalent in BTC**, subject to the configured exchange-rate policy.
+2. Automatic vendor activation only after registration payment is independently verified.
+3. **3% platform commission** on eligible completed vendor sales.
+4. Remaining vendor entitlement becomes eligible for payout according to the escrow/release policy.
 5. Payouts and refunds are recorded as auditable settlements.
 
 These financial controls must be integration-tested before real funds are accepted.
@@ -358,7 +295,7 @@ These financial controls must be integration-tested before real funds are accept
 
 Before accepting real Bitcoin, verify:
 
-1. All database migrations complete successfully on a clean database.
+1. All migrations complete successfully on a clean database.
 2. The application boots without exceptions.
 3. BTCPay invoice creation works.
 4. BTCPay webhook signatures are validated.
@@ -380,7 +317,7 @@ Before accepting real Bitcoin, verify:
 
 The repository includes Kubernetes manifests for the target architecture, including a MySQL StatefulSet with persistent storage, Redis, web, worker, scheduler, ingress, HPA, PDB, network policy, migration job and backup configuration.
 
-The target architecture is:
+Target architecture:
 
 ```text
                     Ingress
@@ -405,7 +342,7 @@ Before production use, configure persistent volumes, readiness/liveness probes, 
 
 GitHub Actions validates the project using PHP 8.3, MySQL 8 and the Vite production build. The CI pipeline installs Composer dependencies, runs Pint, builds the frontend, runs database migrations and executes PHPUnit/Laravel tests.
 
-A local environment should reproduce the same PHP extension requirements as CI where possible.
+The local Podman environment uses the same PHP 8.3 extension requirements as the CI environment where possible.
 
 ## Project status
 
