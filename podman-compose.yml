@@ -1,0 +1,130 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Containerfile.local
+    container_name: kosher-market-app
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      APP_URL: http://localhost:8000
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: kosher_market
+      DB_USERNAME: kosher_market
+      DB_PASSWORD: kosher_market_local
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      QUEUE_CONNECTION: redis
+      CACHE_STORE: redis
+      CACHE_DRIVER: redis
+      SESSION_DRIVER: file
+    depends_on:
+      - mysql
+      - redis
+    volumes:
+      - app_storage:/var/www/html/storage
+    networks:
+      - kosher-market
+
+  queue:
+    build:
+      context: .
+      dockerfile: Containerfile.local
+    container_name: kosher-market-queue
+    restart: unless-stopped
+    command: ["php", "artisan", "queue:work", "redis", "--sleep=3", "--tries=3", "--timeout=90", "--max-time=3600"]
+    env_file:
+      - .env
+    environment:
+      APP_URL: http://localhost:8000
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: kosher_market
+      DB_USERNAME: kosher_market
+      DB_PASSWORD: kosher_market_local
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      QUEUE_CONNECTION: redis
+      CACHE_STORE: redis
+      CACHE_DRIVER: redis
+    depends_on:
+      - mysql
+      - redis
+    volumes:
+      - app_storage:/var/www/html/storage
+    networks:
+      - kosher-market
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: Containerfile.local
+    container_name: kosher-market-scheduler
+    restart: unless-stopped
+    command: ["php", "artisan", "schedule:work"]
+    env_file:
+      - .env
+    environment:
+      APP_URL: http://localhost:8000
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: kosher_market
+      DB_USERNAME: kosher_market
+      DB_PASSWORD: kosher_market_local
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      QUEUE_CONNECTION: redis
+      CACHE_STORE: redis
+      CACHE_DRIVER: redis
+    depends_on:
+      - mysql
+      - redis
+    volumes:
+      - app_storage:/var/www/html/storage
+    networks:
+      - kosher-market
+
+  mysql:
+    image: mysql:8.0
+    container_name: kosher-market-mysql
+    restart: unless-stopped
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_DATABASE: kosher_market
+      MYSQL_USER: kosher_market
+      MYSQL_PASSWORD: kosher_market_local
+      MYSQL_ROOT_PASSWORD: root_local_only
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - kosher-market
+
+  redis:
+    image: redis:7-alpine
+    container_name: kosher-market-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - kosher-market
+
+volumes:
+  mysql_data:
+  redis_data:
+  app_storage:
+
+networks:
+  kosher-market:
+    driver: bridge
