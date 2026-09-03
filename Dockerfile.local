@@ -14,13 +14,19 @@ COPY --from=node:20-bookworm-slim /usr/local/bin/node /usr/local/bin/node
 COPY --from=node:20-bookworm-slim /usr/local/lib/node_modules /usr/local/lib/node_modules
 RUN ln -sf /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm
 
+# Install PHP dependencies before copying the application. Laravel's Composer
+# scripts are intentionally disabled here because artisan/app files are not
+# available until the source is copied below.
 COPY composer.json composer.lock ./
-RUN composer install --no-interaction --prefer-dist --optimize-autoloader
+RUN composer install --no-interaction --prefer-dist --optimize-autoloader --no-scripts
 
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
 
 COPY . .
+
+# Run Laravel's Composer hooks only after the complete application is present.
+RUN composer dump-autoload --optimize --no-interaction
 
 # Build the frontend inside the local image so localhost serves the same
 # production Vite assets that are used by the production Docker image.
