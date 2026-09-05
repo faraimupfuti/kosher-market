@@ -24,6 +24,7 @@ use App\Http\Controllers\Admin\RefundController;
 use App\Http\Controllers\Admin\SocialMediaLinkController;
 use App\Http\Controllers\Admin\VendorController;
 use App\Http\Controllers\BitcoinCheckoutController;
+use App\Http\Controllers\ChatController;
 use App\Http\Controllers\EscrowController;
 use App\Http\Controllers\SiteSettingsController;
 use App\Http\Controllers\Vendor\BitcoinPayoutController;
@@ -131,27 +132,36 @@ Route::middleware(['auth:vendor', 'vendor.can_sell'])->prefix('vendor')->name('v
     Route::put('/bitcoin/payout-address', [BitcoinPayoutController::class, 'update'])->name('bitcoin.payout.update');
     Route::get('/bitcoin/payouts', [BitcoinPayoutController::class, 'index'])->name('bitcoin.payouts');
     Route::get('/bitcoin/payout-address/verify', [BitcoinPayoutVerificationController::class, 'show'])->name('bitcoin.payout.verify');
-    Route::post('/bitcoin/payout-address/verify/request', [BitcoinPayoutVerificationController::class, 'requestVerification'])->name('bitcoin.payout.verify.request');
-    Route::post('/bitcoin/payout-address/verify/confirm', [BitcoinPayoutVerificationController::class, 'confirm'])->name('bitcoin.payout.verify.confirm');
+    Route::post('/bitcoin/payout-address/verify/request', [BitcoinPayoutVerificationController::class, 'requestVerification'])->name('vendor.bitcoin.payout.verify.request');
+    Route::post('/bitcoin/payout-address/verify/confirm', [BitcoinPayoutVerificationController::class, 'confirm'])->name('vendor.bitcoin.payout.verify.confirm');
 });
 
-Route::middleware('auth:customer')->prefix('escrow')->name('escrow.')->group(function () {
-    Route::post('/orders/{order}', [EscrowController::class, 'create'])->name('create');
-    Route::get('/{escrow}', [EscrowController::class, 'show'])->name('show');
-    Route::post('/{escrow}/payment', [EscrowController::class, 'createPayment'])->name('payment');
-    Route::post('/{escrow}/confirm-receipt', [EscrowController::class, 'confirmReceipt'])->name('confirm-receipt');
-    Route::post('/{escrow}/dispute', [EscrowController::class, 'dispute'])->name('dispute');
-});
-
-Route::post('/bitcoin/btcpay/webhook', [EscrowController::class, 'webhook'])->name('bitcoin.btcpay.webhook');
-Route::get('/vendors/{pseudonym}', [VendorProfileController::class, 'show'])->name('vendors.profile');
-
-Route::middleware('auth:customer')->group(function () {
+Route::middleware(['auth:customer'])->group(function () {
+    Route::get('/chat', [ChatController::class, 'index'])->name('chat.index');
+    Route::post('/chat/vendor/{vendor}', [ChatController::class, 'start'])->name('chat.start');
+    Route::get('/chat/{conversation}', [ChatController::class, 'show'])->name('chat.show');
+    Route::post('/chat/{conversation}/messages', [ChatController::class, 'send'])->name('chat.send');
     Route::get('/checkout', [BitcoinCheckoutController::class, 'index'])->name('checkout.index');
     Route::get('/checkout/shipping-options', [BitcoinCheckoutController::class, 'shippingOptions'])->name('checkout.shipping-options');
     Route::post('/checkout/process', [BitcoinCheckoutController::class, 'process'])->name('checkout.process');
 });
 
+Route::middleware(['auth:vendor', 'vendor.can_sell'])->group(function () {
+    Route::get('/vendor/chat', [ChatController::class, 'index'])->name('vendor.chat.index');
+    Route::get('/vendor/chat/{conversation}', [ChatController::class, 'show'])->name('vendor.chat.show');
+    Route::post('/vendor/chat/{conversation}/messages', [ChatController::class, 'send'])->name('vendor.chat.send');
+});
+
+Route::middleware('auth:customer')->group(function () {
+    Route::post('/escrow/orders/{order}', [EscrowController::class, 'create'])->name('escrow.create');
+    Route::get('/escrow/{escrow}', [EscrowController::class, 'show'])->name('escrow.show');
+    Route::post('/escrow/{escrow}/payment', [EscrowController::class, 'createPayment'])->name('escrow.payment');
+    Route::post('/escrow/{escrow}/confirm-receipt', [EscrowController::class, 'confirmReceipt'])->name('escrow.confirm-receipt');
+    Route::post('/escrow/{escrow}/dispute', [EscrowController::class, 'dispute'])->name('escrow.dispute');
+});
+
+Route::post('/bitcoin/btcpay/webhook', [EscrowController::class, 'webhook'])->name('bitcoin.btcpay.webhook');
+Route::get('/vendors/{pseudonym}', [VendorProfileController::class, 'show'])->name('vendors.profile');
 Route::get('site-settings', [SiteSettingsController::class, 'index'])->name('site-settings.index');
 Route::get('site-settings/edit', [SiteSettingsController::class, 'edit'])->name('admin.site-settings.edit');
 Route::put('site-settings/update', [SiteSettingsController::class, 'update'])->name('admin.site-settings.update');
