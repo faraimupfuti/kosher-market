@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Vendor;
+use App\Services\VendorPerformanceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
@@ -18,8 +19,10 @@ class VendorController extends Controller
         return view('admin.vendors.index');
     }
 
-    public function getVendorData()
+    public function getVendorData(VendorPerformanceService $vendorPerformance)
     {
+        $scoredVendors = $vendorPerformance->allScored()->keyBy('id');
+
         $vendors = Vendor::query()
             ->select(['id', 'name', 'email', 'phone', 'status', 'banned_at', 'ban_reason'])
             ->withCount([
@@ -29,25 +32,31 @@ class VendorController extends Controller
             ->withAvg('approvedReviews', 'rating')
             ->withSum([
                 'orders as completed_sales' => fn ($query) => $query->whereIn('status', $this->completedStatuses),
-            ], 'total_amount');
+            ], 'total_price');
 
         return DataTables::of($vendors)
-            ->addColumn('performance', function ($vendor) {
+            ->addColumn('performance', function ($vendor) use ($scoredVendors) {
+                $scored = $scoredVendors->get($vendor->id);
+
                 return sprintf(
-                    '<div><strong>%s BTC</strong><br><small>%d completed orders</small></div>',
+                    '<div><strong>%s BTC</strong><br><small>%d completed orders</small><br><span class="badge bg-dark">Score %s/100</span></div>',
                     number_format((float) ($vendor->completed_sales ?? 0), 8),
-                    $vendor->completed_orders_count
+                    $vendor->completed_orders_count,
+                    number_format((float) ($scored?->performance_score ?? 0), 1)
                 );
             })
-            ->addColumn('rating', function ($vendor) {
+            ->addColumn('rating', function ($vendor) use ($scoredVendors) {
                 if ($vendor->approved_reviews_count < 1) {
                     return '<span class="text-muted">No reviews</span>';
                 }
 
+                $confidence = $scoredVendors->get($vendor->id)?->rating_confidence;
+
                 return sprintf(
-                    '<span class="fw-semibold">★ %s</span><br><small class="text-muted">%d approved reviews</small>',
+                    '<span class="fw-semibold">★ %s</span><br><small class="text-muted">%d approved reviews · confidence %s</small>',
                     number_format((float) ($vendor->approved_reviews_avg_rating ?? 0), 2),
-                    $vendor->approved_reviews_count
+                    $vendor->approved_reviews_count,
+                    number_format((float) $confidence, 2)
                 );
             })
             ->addColumn('action', function ($vendor) {
