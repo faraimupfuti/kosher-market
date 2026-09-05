@@ -12,11 +12,16 @@ class Vendor extends Authenticatable
 
     protected $guard = 'vendor';
 
-    protected $fillable = ['name', 'pseudonym', 'email', 'password', 'phone', 'status', 'profile_image', 'bitcoin_payout_address', 'bitcoin_payout_address_verified_at'];
+    protected $fillable = ['name', 'pseudonym', 'email', 'password', 'phone', 'status', 'profile_image', 'bitcoin_payout_address', 'bitcoin_payout_address_verified_at', 'banned_at', 'ban_reason'];
 
     protected $hidden = ['password', 'email', 'phone', 'bitcoin_payout_address'];
 
-    protected $casts = ['password' => 'hashed', 'bitcoin_payout_address_verified_at' => 'datetime', 'pseudonym_changed_at' => 'datetime'];
+    protected $casts = [
+        'password' => 'hashed',
+        'bitcoin_payout_address_verified_at' => 'datetime',
+        'pseudonym_changed_at' => 'datetime',
+        'banned_at' => 'datetime',
+    ];
 
     protected static function booted(): void
     {
@@ -38,8 +43,35 @@ class Vendor extends Authenticatable
         });
     }
 
+    public function products()
+    {
+        return $this->hasMany(Product::class);
+    }
+
+    public function orders()
+    {
+        return $this->hasMany(Order::class);
+    }
+
+    public function approvedReviews()
+    {
+        return $this->hasManyThrough(
+            ProductReview::class,
+            Product::class,
+            'vendor_id',
+            'product_id',
+            'id',
+            'id'
+        )->where('product_reviews.is_approved', true);
+    }
+
     public function escrowTransactions()
     {
         return $this->hasMany(EscrowTransaction::class, 'vendor_id');
+    }
+
+    public function isSellingEnabled(): bool
+    {
+        return $this->status === 'active';
     }
 }
