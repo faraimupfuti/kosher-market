@@ -6,6 +6,7 @@ use App\Models\Banner;
 use App\Models\Category;
 use App\Models\Product;
 use App\Services\VendorPerformanceService;
+use Illuminate\Support\Facades\Cache;
 
 class StoreController extends Controller
 {
@@ -31,7 +32,11 @@ class StoreController extends Controller
             ->take(10)
             ->get();
 
-        $rankings = $vendorPerformance->rankings(6);
+        $rankings = Cache::remember(
+            'vendor-performance-rankings-v1',
+            now()->addMinutes(5),
+            fn () => $vendorPerformance->rankings(6)
+        );
 
         return view('themes.xylo.home', [
             'banners' => $banners,
