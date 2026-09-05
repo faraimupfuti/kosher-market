@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Country;
 use App\Models\Order;
 use App\Models\Product;
-use App\Models\VendorShippingRate;
 use App\Services\BitcoinEscrowService;
 use App\Services\GlobalShippingService;
 use Illuminate\Http\Request;
@@ -16,9 +15,17 @@ class BitcoinCheckoutController extends Controller
 {
     public function __construct(private BitcoinEscrowService $escrow, private GlobalShippingService $shipping) {}
 
+    private function activeProductQuery()
+    {
+        return Product::where('status', 1)
+            ->whereHas('vendor', fn ($query) => $query->where('status', 'active'));
+    }
+
     public function index(Request $request)
     {
-        $product = Product::with(['primaryVariant', 'shippingCountries'])->findOrFail($request->integer('product_id'));
+        $product = $this->activeProductQuery()
+            ->with(['primaryVariant', 'shippingCountries'])
+            ->findOrFail($request->integer('product_id'));
         abort_if(strtoupper((string) $product->currency) !== 'BTC', 422, 'This marketplace accepts Bitcoin only.');
         $price = $product->primaryVariant?->discount_price ?: $product->primaryVariant?->price ?: $product->price;
         abort_if((float) $price <= 0, 422, 'Product does not have a valid BTC price.');
@@ -34,7 +41,7 @@ class BitcoinCheckoutController extends Controller
             'country' => ['required', 'string', 'size:2'],
             'quantity' => ['required', 'integer', 'min:1', 'max:100'],
         ]);
-        $product = Product::with('primaryVariant')->findOrFail($data['product_id']);
+        $product = $this->activeProductQuery()->with('primaryVariant')->findOrFail($data['product_id']);
         $price = (float) ($product->primaryVariant?->discount_price ?: $product->primaryVariant?->price ?: $product->price);
         return response()->json([
             'currency' => 'BTC',
@@ -61,8 +68,11 @@ class BitcoinCheckoutController extends Controller
         ]);
 
         $result = DB::transaction(function () use ($data, $customer) {
-            $product = Product::with('primaryVariant')->whereKey($data['product_id'])->lockForUpdate()->firstOrFail();
-            abort_if(!$product->status, 422, 'Product is unavailable.');
+            $product = $this->activeProductQuery()
+                ->with('primaryVariant')
+                ->whereKey($data['product_id'])
+                ->lockForUpdate()
+                ->firstOrFail();
             abort_if(strtoupper((string) $product->currency) !== 'BTC', 422, 'This marketplace accepts Bitcoin only.');
             $price = (float) ($product->primaryVariant?->discount_price ?: $product->primaryVariant?->price ?: $product->price);
             abort_if($price <= 0, 422, 'Product does not have a valid BTC price.');
