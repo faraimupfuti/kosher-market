@@ -12,8 +12,6 @@ class ShopController extends Controller
 {
     public function index(Request $request)
     {
-        $locale = app()->getLocale();
-
         $filters = [
             'category' => $request->input('category', []),
             'brand' => $request->input('brand', []),
@@ -26,6 +24,8 @@ class ShopController extends Controller
         $products = Product::with(['translation', 'variants.attributeValues'])
             ->withCount('reviews')
             ->withAvg('reviews', 'rating')
+            ->where('status', 1)
+            ->whereHas('vendor', fn ($query) => $query->where('status', 'active'))
             ->when(! empty($filters['category']), function ($query) use ($filters) {
                 $query->whereIn('category_id', $filters['category']);
             })
