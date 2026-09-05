@@ -9,16 +9,6 @@ use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
-    /*public function show($slug)
-    {
-        $product = Product::where('slug', $slug)
-        ->with(['translation', 'thumbnail', 'reviews'])
-        ->withCount('reviews')
-        ->withAvg('reviews', 'rating')
-        ->firstOrFail();
-        return view('themes.xylo.product-detail', compact('product'));
-    }*/
-
     public function show($slug)
     {
         $product = Product::with([
@@ -34,6 +24,8 @@ class ProductController extends Controller
         ])->withAvg('reviews', 'rating')
             ->withCount('reviews')
             ->where('slug', $slug)
+            ->where('status', 1)
+            ->whereHas('vendor', fn ($query) => $query->where('status', 'active'))
             ->firstOrFail();
 
         $primaryVariant = $product->variants()->where('is_primary', true)->first();
@@ -79,8 +71,8 @@ class ProductController extends Controller
                 'is_out_of_stock' => $isOutOfStock,
                 'currency_symbol' => activeCurrency()->symbol,
             ]);
-        } else {
-            return response()->json(['success' => false]);
         }
+
+        return response()->json(['success' => false]);
     }
 }
