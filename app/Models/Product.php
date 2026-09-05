@@ -26,6 +26,7 @@ class Product extends Model
     public function category() { return $this->belongsTo(Category::class); }
     public function images() { return $this->hasMany(ProductImage::class); }
     public function brand() { return $this->belongsTo(Brand::class); }
+    public function vendor() { return $this->belongsTo(Vendor::class); }
     public function orders() { return $this->hasMany(Order::class); }
     public function getTranslation($field, $locale = 'en') { $translation = $this->translations->firstWhere('language_code', $locale); return $translation ? $translation->$field : null; }
     public function thumbnail() { return $this->hasOne(ProductImage::class)->where('type', 'thumb'); }
