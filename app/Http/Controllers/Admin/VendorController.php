@@ -21,6 +21,7 @@ class VendorController extends Controller
     public function getVendorData()
     {
         $vendors = Vendor::query()
+            ->select(['id', 'name', 'email', 'phone', 'status', 'banned_at', 'ban_reason'])
             ->withCount([
                 'orders as completed_orders_count' => fn ($query) => $query->whereIn('status', $this->completedStatuses),
                 'approvedReviews as approved_reviews_count',
@@ -28,8 +29,7 @@ class VendorController extends Controller
             ->withAvg('approvedReviews', 'rating')
             ->withSum([
                 'orders as completed_sales' => fn ($query) => $query->whereIn('status', $this->completedStatuses),
-            ], 'total_price')
-            ->select(['id', 'name', 'email', 'phone', 'status', 'banned_at', 'ban_reason']);
+            ], 'total_price');
 
         return DataTables::of($vendors)
             ->addColumn('performance', function ($vendor) {
