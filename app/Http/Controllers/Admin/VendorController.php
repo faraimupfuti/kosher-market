@@ -33,7 +33,7 @@ class VendorController extends Controller
             ->withAvg('approvedReviews', 'rating')
             ->withSum([
                 'orders as completed_sales' => fn ($query) => $query->whereIn('status', $this->completedStatuses),
-            ], 'total_price');
+            ], 'total_amount');
 
         return DataTables::of($vendors)
             ->addColumn('performance', function ($vendor) use ($scoredVendors) {
