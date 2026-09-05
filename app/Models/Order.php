@@ -12,7 +12,7 @@ class Order extends Model
     protected $table = 'orders';
 
     protected $fillable = [
-        'order_date', 'status', 'total_price', 'shipping_address', 'billing_address',
+        'order_date', 'status', 'total_amount', 'shipping_address', 'billing_address',
         'payment_method', 'payment_status', 'shipping_method', 'tracking_number',
         'product_id', 'customer_id', 'vendor_id', 'quantity', 'unit_price',
         'discount_amount', 'coupon_code', 'currency', 'created_at', 'updated_at',
@@ -22,7 +22,7 @@ class Order extends Model
     ];
 
     protected $casts = [
-        'total_price' => 'decimal:8',
+        'total_amount' => 'decimal:8',
         'unit_price' => 'decimal:8',
         'discount_amount' => 'decimal:8',
         'shipping_cost_btc' => 'decimal:8',
