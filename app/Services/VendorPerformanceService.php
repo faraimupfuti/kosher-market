@@ -72,7 +72,7 @@ class VendorPerformanceService
                 'orders as sales_90d' => fn ($query) => $query
                     ->whereIn('status', self::COMPLETED_STATUSES)
                     ->where('orders.created_at', '>=', $since),
-            ], 'total_price')
+            ], 'total_amount')
             ->selectSub(
                 DB::table('orders')
                     ->selectRaw('COUNT(DISTINCT orders.customer_id)')
