@@ -5,11 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\Banner;
 use App\Models\Category;
 use App\Models\Product;
-use App\Models\Vendor;
+use App\Services\VendorPerformanceService;
 
 class StoreController extends Controller
 {
-    public function index()
+    public function index(VendorPerformanceService $vendorPerformance)
     {
         $banners = Banner::where('status', 1)
             ->with('translation')
@@ -31,54 +31,16 @@ class StoreController extends Controller
             ->take(10)
             ->get();
 
-        $completedStatuses = ['completed'];
-        $performance = fn () => Vendor::where('status', 'active')
-            ->withCount('approvedReviews')
-            ->withAvg('approvedReviews', 'rating')
-            ->withCount([
-                'orders as completed_orders_count' => fn ($query) => $query->whereIn('status', $completedStatuses),
-            ])
-            ->withSum([
-                'orders as completed_sales' => fn ($query) => $query->whereIn('status', $completedStatuses),
-            ], 'total_amount');
+        $rankings = $vendorPerformance->rankings(6);
 
-        $bestSellingVendors = $performance()
-            ->orderByDesc('completed_sales')
-            ->orderByDesc('completed_orders_count')
-            ->orderByDesc('id')
-            ->take(6)
-            ->get();
-
-        $bestRatedVendors = $performance()
-            ->whereIn('vendors.id', function ($query) {
-                $query->select('products.vendor_id')
-                    ->from('products')
-                    ->join('product_reviews', 'products.id', '=', 'product_reviews.product_id')
-                    ->where('products.status', 1)
-                    ->where('product_reviews.is_approved', true)
-                    ->groupBy('products.vendor_id')
-                    ->havingRaw('COUNT(product_reviews.id) >= 3');
-            })
-            ->orderByDesc('approved_reviews_avg_rating')
-            ->orderByDesc('approved_reviews_count')
-            ->orderByDesc('id')
-            ->take(6)
-            ->get();
-
-        $worstSellingVendors = $performance()
-            ->orderBy('completed_sales')
-            ->orderBy('completed_orders_count')
-            ->orderBy('id')
-            ->take(6)
-            ->get();
-
-        return view('themes.xylo.home', compact(
-            'banners',
-            'categories',
-            'products',
-            'bestSellingVendors',
-            'bestRatedVendors',
-            'worstSellingVendors'
-        ));
+        return view('themes.xylo.home', [
+            'banners' => $banners,
+            'categories' => $categories,
+            'products' => $products,
+            'bestSellingVendors' => $rankings['bestSelling'],
+            'bestRatedVendors' => $rankings['bestRated'],
+            'worstSellingVendors' => $rankings['worstSelling'],
+            'topPerformers' => $rankings['topPerformers'],
+        ]);
     }
 }
