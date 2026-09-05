@@ -20,7 +20,7 @@ Route::prefix('vendor')->group(function () {
     Route::post('/register', [RegistrationController::class, 'store'])->name('vendor.register.store');
     Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth.vendor')->name('vendor.logout');
 
-    Route::middleware('auth.vendor')->group(function () {
+    Route::middleware(['auth.vendor', 'vendor.can_sell'])->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('vendor.dashboard');
         Route::resource('products', ProductController::class)->names('vendor.products');
         Route::post('products/data', [ProductController::class, 'getProducts'])->name('vendor.products.data');
