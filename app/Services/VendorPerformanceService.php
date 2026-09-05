@@ -14,8 +14,7 @@ class VendorPerformanceService
 
     public function rankings(int $limit = 6): array
     {
-        $vendors = $this->baseQuery()->get();
-        $this->score($vendors);
+        $vendors = $this->allScored();
 
         return [
             'bestSelling' => $vendors->sortBy([
@@ -45,9 +44,12 @@ class VendorPerformanceService
         ];
     }
 
-    public function query()
+    public function allScored(): Collection
     {
-        return $this->baseQuery();
+        $vendors = $this->baseQuery()->get();
+        $this->score($vendors);
+
+        return $vendors;
     }
 
     private function baseQuery()
