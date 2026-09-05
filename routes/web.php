@@ -34,6 +34,7 @@ use App\Http\Controllers\Vendor\ProductShippingController;
 use App\Http\Controllers\Vendor\ShippingController;
 use App\Http\Controllers\VendorRegistrationFeeController;
 use App\Http\Controllers\VendorProfileController;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/login', function () { return view('admin.auth.login'); });
@@ -43,12 +44,12 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
     Route::resource('categories', CategoryController::class);
     Route::post('/categories/data', [CategoryController::class, 'getCategories'])->name('categories.data');
-    Route::post('/admin/categories/update-status', [CategoryController::class, 'updateCategoryStatus'])->name('categories.updateStatus');
+    Route::post('/categories/update-status', [CategoryController::class, 'updateCategoryStatus'])->name('categories.updateStatus');
     Route::resource('products', ProductController::class);
     Route::post('products/data', [ProductController::class, 'getProducts'])->name('products.data');
-    Route::post('admin/products/updateStatus', [ProductController::class, 'updateStatus'])->name('products.updateStatus');
+    Route::post('products/updateStatus', [ProductController::class, 'updateStatus'])->name('products.updateStatus');
     Route::get('/brands', [BrandController::class, 'index'])->name('brands.index');
-    Route::get('admin/brands/getdata', [BrandController::class, 'getData'])->name('brands.getData');
+    Route::get('brands/getdata', [BrandController::class, 'getData'])->name('brands.getData');
     Route::get('brands/{id}/edit', [BrandController::class, 'edit'])->name('brands.edit');
     Route::put('brands/{brand}', [BrandController::class, 'update'])->name('brands.update');
     Route::get('brands/create', [BrandController::class, 'create'])->name('brands.create');
@@ -73,7 +74,7 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::resource('product_variants', ProductVariantController::class);
     Route::post('/product_variants/data', [ProductVariantController::class, 'getData'])->name('product_variants.data');
     Route::resource('customers', CustomerController::class);
-    Route::get('admin/customers/data', [CustomerController::class, 'getCustomerData'])->name('customers.data');
+    Route::get('customers/data', [CustomerController::class, 'getCustomerData'])->name('customers.data');
     Route::get('/reviews/data', [ProductReviewController::class, 'getData'])->name('reviews.data');
     Route::resource('reviews', ProductReviewController::class)->except(['create', 'store']);
     Route::resource('attributes', AttributeController::class);
@@ -109,7 +110,7 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::get('escrow', [AdminEscrowController::class, 'index'])->name('escrow.index');
     Route::post('escrow/{escrow}/release', [AdminEscrowController::class, 'release'])->name('escrow.release');
     Route::post('escrow/{escrow}/refund', [AdminEscrowController::class, 'refund'])->name('escrow.refund');
-    Route::post('escrow/disputes/{dispute}/resolve', [AdminEscrowController::class, 'resolveDispute'])->name('admin.escrow.disputes.resolve');
+    Route::post('escrow/disputes/{dispute}/resolve', [AdminEscrowController::class, 'resolveDispute'])->name('escrow.disputes.resolve');
     Route::get('bitcoin/settlements', [BitcoinSettlementController::class, 'index'])->name('bitcoin.settlements.index');
     Route::post('bitcoin/vendors/{vendor}/verify', [BitcoinSettlementController::class, 'verifyVendor'])->name('bitcoin.vendors.verify');
     Route::post('bitcoin/settlements/{settlement}/destination', [BitcoinSettlementController::class, 'destination'])->name('bitcoin.settlements.destination');
@@ -132,8 +133,8 @@ Route::middleware(['auth:vendor', 'vendor.can_sell'])->prefix('vendor')->name('v
     Route::put('/bitcoin/payout-address', [BitcoinPayoutController::class, 'update'])->name('bitcoin.payout.update');
     Route::get('/bitcoin/payouts', [BitcoinPayoutController::class, 'index'])->name('bitcoin.payouts');
     Route::get('/bitcoin/payout-address/verify', [BitcoinPayoutVerificationController::class, 'show'])->name('bitcoin.payout.verify');
-    Route::post('/bitcoin/payout-address/verify/request', [BitcoinPayoutVerificationController::class, 'requestVerification'])->name('vendor.bitcoin.payout.verify.request');
-    Route::post('/bitcoin/payout-address/verify/confirm', [BitcoinPayoutVerificationController::class, 'confirm'])->name('vendor.bitcoin.payout.verify.confirm');
+    Route::post('/bitcoin/payout-address/verify/request', [BitcoinPayoutVerificationController::class, 'requestVerification'])->name('bitcoin.payout.verify.request');
+    Route::post('/bitcoin/payout-address/verify/confirm', [BitcoinPayoutVerificationController::class, 'confirm'])->name('bitcoin.payout.verify.confirm');
 });
 
 Route::middleware(['auth:customer'])->group(function () {
@@ -146,7 +147,7 @@ Route::middleware(['auth:customer'])->group(function () {
     Route::post('/checkout/process', [BitcoinCheckoutController::class, 'process'])->name('checkout.process');
 });
 
-Route::middleware(['auth:vendor', 'vendor.can_sell'])->group(function () {
+Route::middleware(['auth:vendor'])->group(function () {
     Route::get('/vendor/chat', [ChatController::class, 'index'])->name('vendor.chat.index');
     Route::get('/vendor/chat/{conversation}', [ChatController::class, 'show'])->name('vendor.chat.show');
     Route::post('/vendor/chat/{conversation}/messages', [ChatController::class, 'send'])->name('vendor.chat.send');
