@@ -11,7 +11,10 @@ class VendorProfileController extends Controller
 {
     public function show(string $pseudonym)
     {
-        $vendor = Vendor::where('pseudonym', $pseudonym)->where('status', 1)->firstOrFail();
+        $vendor = Vendor::where('pseudonym', $pseudonym)
+            ->where('status', 'active')
+            ->firstOrFail();
+
         $productIds = Product::where('vendor_id', $vendor->id)->pluck('id');
         $reviews = ProductReview::approved()->whereIn('product_id', $productIds);
         $completedOrders = Order::where('vendor_id', $vendor->id)
@@ -19,7 +22,10 @@ class VendorProfileController extends Controller
             ->count();
         $rating = round((float) ($reviews->avg('rating') ?: 0), 2);
         $reviewCount = $reviews->count();
-        $products = Product::where('vendor_id', $vendor->id)->where('status', 1)->latest()->paginate(24);
+        $products = Product::where('vendor_id', $vendor->id)
+            ->where('status', 1)
+            ->latest()
+            ->paginate(24);
 
         return view('vendors.public-profile', compact('vendor', 'completedOrders', 'rating', 'reviewCount', 'products'));
     }
