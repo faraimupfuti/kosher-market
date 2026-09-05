@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Vendor;
 use App\Services\VendorPerformanceService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 use Yajra\DataTables\Facades\DataTables;
@@ -99,6 +100,7 @@ class VendorController extends Controller
         }
 
         $vendor->save();
+        Cache::forget('vendor-performance-rankings-v1');
 
         $message = match ($validated['status']) {
             'banned' => 'Vendor has been banned and can no longer sell on the marketplace.',
@@ -136,6 +138,8 @@ class VendorController extends Controller
             'status' => $validatedData['status'],
         ]);
 
+        Cache::forget('vendor-performance-rankings-v1');
+
         return redirect()->route('admin.vendors.index')
             ->with('success', 'Vendor registered successfully!');
     }
@@ -144,6 +148,7 @@ class VendorController extends Controller
     {
         $vendor = Vendor::findOrFail($id);
         $vendor->delete();
+        Cache::forget('vendor-performance-rankings-v1');
 
         return response()->json([
             'success' => true,
