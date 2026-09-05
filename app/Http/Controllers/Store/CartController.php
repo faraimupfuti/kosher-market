@@ -24,7 +24,17 @@ class CartController extends Controller
         $quantity = (int) ($request->quantity ?? 1);
         $attributeValueIds = $request->attribute_value_ids ?? [];
 
-        $product = Product::with('thumbnail')->findOrFail($productId);
+        $product = Product::with('thumbnail')
+            ->whereKey($productId)
+            ->where('status', 1)
+            ->whereHas('vendor', fn ($query) => $query->where('status', 'active'))
+            ->first();
+
+        if (! $product) {
+            return response()->json([
+                'message' => 'This product is currently unavailable because its vendor is not permitted to sell.',
+            ], 422);
+        }
 
         $variant = null;
         if ($product->product_type == 'simple') {
