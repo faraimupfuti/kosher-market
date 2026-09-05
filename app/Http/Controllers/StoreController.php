@@ -31,7 +31,7 @@ class StoreController extends Controller
             ->take(10)
             ->get();
 
-        $completedStatuses = ['completed', 'delivered', 'released'];
+        $completedStatuses = ['completed'];
         $performance = fn () => Vendor::where('status', 'active')
             ->withCount('approvedReviews')
             ->withAvg('approvedReviews', 'rating')
@@ -40,7 +40,7 @@ class StoreController extends Controller
             ])
             ->withSum([
                 'orders as completed_sales' => fn ($query) => $query->whereIn('status', $completedStatuses),
-            ], 'total_price');
+            ], 'total_amount');
 
         $bestSellingVendors = $performance()
             ->orderByDesc('completed_sales')
