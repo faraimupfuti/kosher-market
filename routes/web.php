@@ -108,7 +108,7 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::get('escrow', [AdminEscrowController::class, 'index'])->name('escrow.index');
     Route::post('escrow/{escrow}/release', [AdminEscrowController::class, 'release'])->name('escrow.release');
     Route::post('escrow/{escrow}/refund', [AdminEscrowController::class, 'refund'])->name('escrow.refund');
-    Route::post('escrow/disputes/{dispute}/resolve', [AdminEscrowController::class, 'resolveDispute'])->name('escrow.disputes.resolve');
+    Route::post('escrow/disputes/{dispute}/resolve', [AdminEscrowController::class, 'resolveDispute'])->name('admin.escrow.disputes.resolve');
     Route::get('bitcoin/settlements', [BitcoinSettlementController::class, 'index'])->name('bitcoin.settlements.index');
     Route::post('bitcoin/vendors/{vendor}/verify', [BitcoinSettlementController::class, 'verifyVendor'])->name('bitcoin.vendors.verify');
     Route::post('bitcoin/settlements/{settlement}/destination', [BitcoinSettlementController::class, 'destination'])->name('bitcoin.settlements.destination');
@@ -117,7 +117,7 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::post('bitcoin/settlements/{settlement}/sync', [BitcoinSettlementController::class, 'sync'])->name('bitcoin.settlements.sync');
 });
 
-Route::middleware('auth:vendor')->prefix('vendor')->name('vendor.')->group(function () {
+Route::middleware(['auth:vendor', 'vendor.can_sell'])->prefix('vendor')->name('vendor.')->group(function () {
     Route::get('/registration-fee', [VendorRegistrationFeeController::class, 'show'])->name('registration-fee');
     Route::get('/shipping', [ShippingController::class, 'index'])->name('shipping');
     Route::post('/shipping/zones', [ShippingController::class, 'storeZone'])->name('shipping.zones.store');
