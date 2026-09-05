@@ -50,7 +50,15 @@ class StoreController extends Controller
             ->get();
 
         $bestRatedVendors = $performance()
-            ->having('approved_reviews_count', '>=', 3)
+            ->whereIn('vendors.id', function ($query) {
+                $query->select('products.vendor_id')
+                    ->from('products')
+                    ->join('product_reviews', 'products.id', '=', 'product_reviews.product_id')
+                    ->where('products.status', 1)
+                    ->where('product_reviews.is_approved', true)
+                    ->groupBy('products.vendor_id')
+                    ->havingRaw('COUNT(product_reviews.id) >= 3');
+            })
             ->orderByDesc('approved_reviews_avg_rating')
             ->orderByDesc('approved_reviews_count')
             ->orderByDesc('id')
