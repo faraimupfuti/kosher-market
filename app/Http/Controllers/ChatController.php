@@ -15,9 +15,18 @@ class ChatController extends Controller
         $guard = $request->user('customer') ? 'customer' : 'vendor';
         $user = $request->user($guard);
 
-        $conversations = Conversation::with(['customer', 'vendor', 'messages' => fn ($q) => $q->latest()->limit(1)])
+        $conversations = Conversation::with([
+            'customer',
+            'vendor',
+            'messages' => fn ($q) => $q->latest()->limit(1),
+        ])
             ->when($guard === 'customer', fn ($q) => $q->where('customer_id', $user->id))
             ->when($guard === 'vendor', fn ($q) => $q->where('vendor_id', $user->id))
+            ->withCount(['messages as unread_count' => fn ($q) => $q
+                ->whereNull('read_at')
+                ->when($guard === 'customer', fn ($q) => $q->whereNotNull('sender_vendor_id'))
+                ->when($guard === 'vendor', fn ($q) => $q->whereNotNull('sender_customer_id'))
+            ])
             ->orderByDesc('last_message_at')->orderByDesc('id')->get();
 
         return view('chat.index', compact('conversations', 'guard'));
@@ -29,11 +38,28 @@ class ChatController extends Controller
         $customer = $request->user('customer');
         abort_unless($customer, 403);
 
-        $conversation = Conversation::firstOrCreate([
-            'customer_id' => $customer->id,
-            'vendor_id' => $vendor->id,
-            'order_id' => $request->input('order_id'),
-        ]);
+        $request->validate(['order_id' => ['nullable', 'integer', 'exists:orders,id']]);
+        $orderId = $request->integer('order_id') ?: null;
+
+        $query = Conversation::where('customer_id', $customer->id)
+            ->where('vendor_id', $vendor->id);
+
+        if ($orderId) {
+            $query->where('order_id', $orderId);
+        } else {
+            $query->whereNull('order_id');
+        }
+
+        $conversation = $query->first();
+
+        if (!$conversation) {
+            $conversation = Conversation::create([
+                'customer_id' => $customer->id,
+                'vendor_id' => $vendor->id,
+                'order_id' => $orderId,
+                'last_message_at' => now(),
+            ]);
+        }
 
         return redirect()->route('chat.show', $conversation);
     }
@@ -41,7 +67,7 @@ class ChatController extends Controller
     public function show(Request $request, Conversation $conversation)
     {
         $this->authorizeConversation($request, $conversation);
-        $conversation->load(['customer', 'vendor', 'messages' => fn ($q) => $q->oldest()]);
+        $conversation->load(['customer', 'vendor', 'order', 'messages' => fn ($q) => $q->oldest()]);
 
         $guard = $request->user('customer') ? 'customer' : 'vendor';
         $conversation->messages()->whereNull('read_at')
@@ -59,7 +85,9 @@ class ChatController extends Controller
         $customer = $request->user('customer');
         $vendor = $request->user('vendor');
 
-        if ($vendor && !$vendor->isSellingEnabled()) abort(403);
+        if ($vendor && !$vendor->isSellingEnabled()) {
+            abort(403);
+        }
 
         DB::transaction(function () use ($conversation, $validated, $customer, $vendor) {
             Message::create([
@@ -71,13 +99,16 @@ class ChatController extends Controller
             $conversation->update(['last_message_at' => now()]);
         });
 
-        return redirect()->route('chat.show', $conversation)->with('success', 'Message sent.');
+        $route = $vendor ? 'vendor.chat.show' : 'chat.show';
+
+        return redirect()->route($route, $conversation)->with('success', 'Message sent.');
     }
 
     private function authorizeConversation(Request $request, Conversation $conversation): void
     {
         $customer = $request->user('customer');
         $vendor = $request->user('vendor');
+
         abort_unless(
             ($customer && $conversation->customer_id === $customer->id) ||
             ($vendor && $conversation->vendor_id === $vendor->id),
