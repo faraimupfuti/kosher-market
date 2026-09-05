@@ -83,6 +83,7 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::delete('translations/{translation}', [AttributeController::class, 'destroy'])->name('translations.destroy');
     Route::get('vendors', [VendorController::class, 'index'])->name('vendors.index');
     Route::get('vendors/data', [VendorController::class, 'getVendorData'])->name('vendors.data');
+    Route::post('vendors/{id}/status', [VendorController::class, 'updateStatus'])->name('vendors.status');
     Route::delete('vendors/{id}', [VendorController::class, 'destroy'])->name('vendors.destroy');
     Route::get('vendors/create', [VendorController::class, 'create'])->name('vendors.create');
     Route::post('vendors', [VendorController::class, 'store'])->name('vendors.store');
