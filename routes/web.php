@@ -39,7 +39,6 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/login', function () { return view('admin.auth.login'); });
 Auth::routes();
-
 Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
     Route::resource('categories', CategoryController::class);
@@ -118,7 +117,6 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::post('bitcoin/settlements/{settlement}/approve', [BitcoinSettlementController::class, 'approve'])->name('bitcoin.settlements.approve');
     Route::post('bitcoin/settlements/{settlement}/sync', [BitcoinSettlementController::class, 'sync'])->name('bitcoin.settlements.sync');
 });
-
 Route::middleware(['auth:vendor', 'vendor.can_sell'])->prefix('vendor')->name('vendor.')->group(function () {
     Route::get('/registration-fee', [VendorRegistrationFeeController::class, 'show'])->name('registration-fee');
     Route::get('/shipping', [ShippingController::class, 'index'])->name('shipping');
@@ -136,25 +134,24 @@ Route::middleware(['auth:vendor', 'vendor.can_sell'])->prefix('vendor')->name('v
     Route::post('/bitcoin/payout-address/verify/request', [BitcoinPayoutVerificationController::class, 'requestVerification'])->name('bitcoin.payout.verify.request');
     Route::post('/bitcoin/payout-address/verify/confirm', [BitcoinPayoutVerificationController::class, 'confirm'])->name('bitcoin.payout.verify.confirm');
 });
-
 Route::middleware(['auth:customer'])->group(function () {
     Route::get('/chat', [ChatController::class, 'index'])->name('chat.index');
     Route::post('/chat/vendor/{vendor}', [ChatController::class, 'start'])->name('chat.start');
     Route::get('/chat/{conversation}/messages', [ChatController::class, 'messages'])->name('chat.messages');
     Route::get('/chat/{conversation}', [ChatController::class, 'show'])->name('chat.show');
     Route::post('/chat/{conversation}/messages', [ChatController::class, 'send'])->name('chat.send');
+    Route::get('/chat/attachments/{message}', [ChatController::class, 'downloadAttachment'])->name('chat.attachments.download');
     Route::get('/checkout', [BitcoinCheckoutController::class, 'index'])->name('checkout.index');
     Route::get('/checkout/shipping-options', [BitcoinCheckoutController::class, 'shippingOptions'])->name('checkout.shipping-options');
     Route::post('/checkout/process', [BitcoinCheckoutController::class, 'process'])->name('checkout.process');
 });
-
 Route::middleware(['auth:vendor'])->group(function () {
     Route::get('/vendor/chat', [ChatController::class, 'index'])->name('vendor.chat.index');
     Route::get('/vendor/chat/{conversation}/messages', [ChatController::class, 'messages'])->name('vendor.chat.messages');
     Route::get('/vendor/chat/{conversation}', [ChatController::class, 'show'])->name('vendor.chat.show');
     Route::post('/vendor/chat/{conversation}/messages', [ChatController::class, 'send'])->name('vendor.chat.send');
+    Route::get('/vendor/chat/attachments/{message}', [ChatController::class, 'downloadAttachment'])->name('vendor.chat.attachments.download');
 });
-
 Route::middleware('auth:customer')->group(function () {
     Route::post('/escrow/orders/{order}', [EscrowController::class, 'create'])->name('escrow.create');
     Route::get('/escrow/{escrow}', [EscrowController::class, 'show'])->name('escrow.show');
@@ -162,7 +159,6 @@ Route::middleware('auth:customer')->group(function () {
     Route::post('/escrow/{escrow}/confirm-receipt', [EscrowController::class, 'confirmReceipt'])->name('escrow.confirm-receipt');
     Route::post('/escrow/{escrow}/dispute', [EscrowController::class, 'dispute'])->name('escrow.dispute');
 });
-
 Route::post('/bitcoin/btcpay/webhook', [EscrowController::class, 'webhook'])->name('bitcoin.btcpay.webhook');
 Route::get('/vendors/{pseudonym}', [VendorProfileController::class, 'show'])->name('vendors.profile');
 Route::get('site-settings', [SiteSettingsController::class, 'index'])->name('site-settings.index');
