@@ -11,23 +11,14 @@ use Illuminate\Support\Facades\Route;
 class RouteServiceProvider extends ServiceProvider
 {
     public const HOME = '/home';
-
     public function boot(): void
     {
-        RateLimiter::for('api', function (Request $request) {
-            return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
-        });
-
+        RateLimiter::for('api', function (Request $request) { return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip()); });
         $this->routes(function () {
             Route::middleware('api')->prefix('api')->group(base_path('routes/api.php'));
-            Route::middleware('web')->group(base_path('routes/web.php'));
-            Route::middleware('web')->group(base_path('routes/store.php'));
-            Route::middleware('web')->group(base_path('routes/vendor.php'));
-            Route::middleware('web')->group(base_path('routes/notifications.php'));
-            Route::middleware('web')->group(base_path('routes/chat-moderation.php'));
-            Route::middleware('web')->group(base_path('routes/admin-audit.php'));
-            Route::middleware('web')->group(base_path('routes/marketplace.php'));
-            Route::middleware('web')->group(base_path('routes/search.php'));
+            foreach (['web.php','store.php','vendor.php','notifications.php','chat-moderation.php','admin-audit.php','marketplace.php','search.php','vendor-analytics.php'] as $routeFile) {
+                Route::middleware('web')->group(base_path('routes/'.$routeFile));
+            }
         });
     }
 }
