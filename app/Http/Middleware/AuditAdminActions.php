@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Models\AuditLog;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
 class AuditAdminActions
@@ -12,10 +13,12 @@ class AuditAdminActions
     public function handle(Request $request, Closure $next): Response
     {
         $response = $next($request);
-        if (str_starts_with(ltrim($request->path(), '/'), 'admin/') && $request->user() && $request->route()) {
+        $path = ltrim($request->path(), '/');
+        $actor = Auth::guard('web')->user();
+        if (str_starts_with($path, 'admin/') && $actor && $request->route()) {
             AuditLog::create([
-                'actor_type' => get_class($request->user()),
-                'actor_id' => $request->user()->getKey(),
+                'actor_type' => get_class($actor),
+                'actor_id' => $actor->getKey(),
                 'action' => $request->route()->getName() ?: $request->method().' '.$request->path(),
                 'route' => $request->path(),
                 'method' => $request->method(),
