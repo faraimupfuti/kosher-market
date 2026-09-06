@@ -4,10 +4,20 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use RuntimeException;
 
 class EscrowTransaction extends Model
 {
     use HasFactory;
+
+    private const TRANSITIONS = [
+        'pending' => ['funded', 'cancelled'],
+        'funded' => ['released', 'disputed', 'refund_pending'],
+        'processing' => ['funded', 'released', 'disputed', 'refund_pending'],
+        'disputed' => ['released', 'refund_pending'],
+        'refund_pending' => ['refunded'],
+        'released' => ['paid'],
+    ];
 
     protected $fillable = [
         'order_id', 'payment_id', 'buyer_id', 'vendor_id', 'amount',
@@ -24,6 +34,20 @@ class EscrowTransaction extends Model
         'funded_at' => 'datetime', 'release_due_at' => 'datetime', 'released_at' => 'datetime',
         'refunded_at' => 'datetime', 'payment_detected_at' => 'datetime', 'payment_confirmed_at' => 'datetime',
     ];
+
+    public function canTransitionTo(string $next): bool
+    {
+        if ($this->status === $next) return true;
+        return in_array($next, self::TRANSITIONS[$this->status] ?? [], true);
+    }
+
+    public function transitionTo(string $next): void
+    {
+        if (!$this->canTransitionTo($next)) {
+            throw new RuntimeException("Invalid escrow state transition: {$this->status} -> {$next}.");
+        }
+        $this->status = $next;
+    }
 
     public function order() { return $this->belongsTo(Order::class); }
     public function payment() { return $this->belongsTo(Payment::class); }
