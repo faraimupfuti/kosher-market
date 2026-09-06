@@ -6,6 +6,7 @@ use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\Product;
 use App\Models\Vendor;
+use App\Notifications\ChatMessageNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -93,6 +94,12 @@ class ChatController extends Controller
                 'attachment_size' => $attachment?->getSize(),
             ]), fn () => $conversation->update(['last_message_at' => now()]));
         });
+
+        $recipient = $customer ? $conversation->vendor : $conversation->customer;
+        $senderName = $customer ? ($customer->name ?: 'Customer') : ($vendor->pseudonym ?: $vendor->name ?: 'Vendor');
+        $preview = trim((string) ($message->body ?: 'Sent an attachment'));
+        $recipient?->notify(new ChatMessageNotification($conversation->id, $senderName, mb_substr($preview, 0, 160)));
+
         if ($request->expectsJson()) return response()->json(['message' => $message->fresh()], 201);
         return redirect()->route($vendor ? 'vendor.chat.show' : 'chat.show', $conversation)->with('success', 'Message sent.');
     }
