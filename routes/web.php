@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\EscrowController as AdminEscrowController;
+use App\Http\Controllers\Admin\EscrowReconciliationController;
 use App\Http\Controllers\Admin\LanguageController;
 use App\Http\Controllers\Admin\MenuController;
 use App\Http\Controllers\Admin\MenuItemController;
@@ -107,6 +108,7 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::get('escrow', [AdminEscrowController::class, 'index'])->name('escrow.index');
+    Route::get('escrow/reconciliation', [EscrowReconciliationController::class, 'index'])->name('escrow.reconciliation');
     Route::post('escrow/{escrow}/release', [AdminEscrowController::class, 'release'])->name('escrow.release');
     Route::post('escrow/{escrow}/refund', [AdminEscrowController::class, 'refund'])->name('escrow.refund');
     Route::post('escrow/disputes/{dispute}/resolve', [AdminEscrowController::class, 'resolveDispute'])->name('escrow.disputes.resolve');
