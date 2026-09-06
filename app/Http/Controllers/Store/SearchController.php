@@ -10,14 +10,27 @@ use Illuminate\Support\Facades\Storage;
 
 class SearchController extends Controller
 {
+    private function validatedSearch(Request $request): array
+    {
+        return $request->validate([
+            'q' => ['required', 'string', 'min:2', 'max:100'],
+            'locale' => ['nullable', 'string', 'max:10'],
+        ]);
+    }
+
     public function suggestions(Request $request)
     {
-        $query = $request->input('q');
-        $locale = $request->input('locale', App::getLocale());
+        $data = $this->validatedSearch($request);
+        $query = trim($data['q']);
+        $locale = $data['locale'] ?? App::getLocale();
 
-        $products = Product::whereHas('translations', function ($q) use ($query, $locale) {
-            $q->where('name', 'like', "%{$query}%")->where('language_code', $locale);
-        })
+        $products = Product::query()
+            ->where('status', 1)
+            ->whereHas('vendor', fn ($q) => $q->where('status', 'active'))
+            ->whereHas('translations', function ($q) use ($query, $locale) {
+                $q->where('name', 'like', "%{$query}%")
+                    ->where('language_code', $locale);
+            })
             ->with([
                 'translations' => function ($q) use ($locale) {
                     $q->where('language_code', $locale)->select('product_id', 'name');
@@ -27,7 +40,7 @@ class SearchController extends Controller
             ->limit(10)
             ->get(['id', 'slug']);
 
-        $products = $products->map(function ($product) {
+        return response()->json($products->map(function ($product) {
             return [
                 'id' => $product->id,
                 'slug' => $product->slug,
@@ -36,26 +49,30 @@ class SearchController extends Controller
                     : asset('default-thumbnail.jpg'),
                 'name' => $product->translations->first()->name ?? null,
             ];
-        });
-
-        return response()->json($products);
+        }));
     }
 
     public function searchResults(Request $request)
     {
-        $query = $request->input('q');
-        $locale = $request->input('locale', App::getLocale());
+        $data = $this->validatedSearch($request);
+        $query = trim($data['q']);
+        $locale = $data['locale'] ?? App::getLocale();
 
-        $products = Product::whereHas('translations', function ($q) use ($query, $locale) {
-            $q->where('name', 'like', "%{$query}%")->where('locale', $locale);
-        })
+        $products = Product::query()
+            ->where('status', 1)
+            ->whereHas('vendor', fn ($q) => $q->where('status', 'active'))
+            ->whereHas('translations', function ($q) use ($query, $locale) {
+                $q->where('name', 'like', "%{$query}%")
+                    ->where('language_code', $locale);
+            })
             ->with([
                 'translations' => function ($q) use ($locale) {
-                    $q->where('locale', $locale)->select('product_id', 'name', 'description');
+                    $q->where('language_code', $locale)->select('product_id', 'name', 'description');
                 },
                 'thumbnail',
             ])
-            ->paginate(10);
+            ->paginate(10)
+            ->withQueryString();
 
         return view('search-results', compact('products', 'query'));
     }
