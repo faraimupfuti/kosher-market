@@ -79,6 +79,8 @@ class ChatController extends Controller
         ]);
         $customer = $request->user('customer');
         $vendor = $request->user('vendor');
+        $guard = $customer ? 'customer' : 'vendor';
+        abort_if($conversation->isBlockedFor($guard), 403, 'This conversation is blocked.');
         if ($vendor && !$vendor->isSellingEnabled()) abort(403);
         $message = DB::transaction(function () use ($conversation, $validated, $customer, $vendor, $request) {
             $attachment = $request->file('attachment');
@@ -94,12 +96,10 @@ class ChatController extends Controller
                 'attachment_size' => $attachment?->getSize(),
             ]), fn () => $conversation->update(['last_message_at' => now()]));
         });
-
         $recipient = $customer ? $conversation->vendor : $conversation->customer;
         $senderName = $customer ? ($customer->name ?: 'Customer') : ($vendor->pseudonym ?: $vendor->name ?: 'Vendor');
         $preview = trim((string) ($message->body ?: 'Sent an attachment'));
         $recipient?->notify(new ChatMessageNotification($conversation->id, $senderName, mb_substr($preview, 0, 160)));
-
         if ($request->expectsJson()) return response()->json(['message' => $message->fresh()], 201);
         return redirect()->route($vendor ? 'vendor.chat.show' : 'chat.show', $conversation)->with('success', 'Message sent.');
     }
