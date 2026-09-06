@@ -12,7 +12,7 @@ class Vendor extends Authenticatable
 
     protected $guard = 'vendor';
 
-    protected $fillable = ['name', 'pseudonym', 'email', 'password', 'phone', 'status', 'profile_image', 'bitcoin_payout_address', 'bitcoin_payout_address_verified_at', 'banned_at', 'ban_reason'];
+    protected $fillable = ['name', 'pseudonym', 'email', 'password', 'phone', 'status', 'profile_image', 'bitcoin_payout_address', 'bitcoin_payout_address_verified_at', 'banned_at', 'ban_reason', 'verification_status', 'trust_score', 'verified_at', 'response_rate', 'dispute_rate', 'refund_rate', 'fulfillment_rate'];
 
     protected $hidden = ['password', 'email', 'phone', 'bitcoin_payout_address'];
 
@@ -21,6 +21,12 @@ class Vendor extends Authenticatable
         'bitcoin_payout_address_verified_at' => 'datetime',
         'pseudonym_changed_at' => 'datetime',
         'banned_at' => 'datetime',
+        'verified_at' => 'datetime',
+        'trust_score' => 'integer',
+        'response_rate' => 'decimal:2',
+        'dispute_rate' => 'decimal:2',
+        'refund_rate' => 'decimal:2',
+        'fulfillment_rate' => 'decimal:2',
     ];
 
     protected static function booted(): void
@@ -43,35 +49,16 @@ class Vendor extends Authenticatable
         });
     }
 
-    public function products()
+    public function products() { return $this->hasMany(Product::class); }
+    public function orders() { return $this->hasMany(Order::class); }
+    public function approvedReviews() { return $this->hasManyThrough(ProductReview::class, Product::class, 'vendor_id', 'product_id', 'id', 'id')->where('product_reviews.is_approved', true); }
+    public function escrowTransactions() { return $this->hasMany(EscrowTransaction::class, 'vendor_id'); }
+    public function isSellingEnabled(): bool { return $this->status === 'active'; }
+    public function trustBadge(): string
     {
-        return $this->hasMany(Product::class);
-    }
-
-    public function orders()
-    {
-        return $this->hasMany(Order::class);
-    }
-
-    public function approvedReviews()
-    {
-        return $this->hasManyThrough(
-            ProductReview::class,
-            Product::class,
-            'vendor_id',
-            'product_id',
-            'id',
-            'id'
-        )->where('product_reviews.is_approved', true);
-    }
-
-    public function escrowTransactions()
-    {
-        return $this->hasMany(EscrowTransaction::class, 'vendor_id');
-    }
-
-    public function isSellingEnabled(): bool
-    {
-        return $this->status === 'active';
+        if ($this->verification_status === 'verified' && $this->trust_score >= 85) return 'Verified Vendor';
+        if ($this->trust_score >= 75) return 'Established Vendor';
+        if ($this->trust_score >= 60) return 'Developing Vendor';
+        return 'New Vendor';
     }
 }
