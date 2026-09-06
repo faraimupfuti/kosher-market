@@ -9,6 +9,7 @@ use App\Models\EscrowTransaction;
 use App\Models\Order;
 use App\Models\VendorRegistrationFee;
 use App\Services\AutomaticBitcoinPayoutService;
+use App\Services\BitcoinAmount;
 use App\Services\BitcoinEscrowService;
 use App\Services\VendorRegistrationFeeService;
 use Illuminate\Http\Request;
@@ -134,8 +135,7 @@ class EscrowController extends Controller
 
             $invoiceAmount=(string)($invoice['amount']??data_get($invoice,'paymentMethods.BTC.amount',''));
             if ($invoiceAmount === '') throw new \RuntimeException('BTCPay invoice amount is missing.');
-            $expectedAmount=(string)$escrow->amount;
-            if (app(\App\Services\BitcoinAmount::class)->toSatoshis($invoiceAmount) !== app(\App\Services\BitcoinAmount::class)->toSatoshis($expectedAmount)) throw new \RuntimeException('BTCPay invoice amount does not match escrow amount.');
+            if (BitcoinAmount::toSatoshis($invoiceAmount) !== BitcoinAmount::toSatoshis((string)$escrow->amount)) throw new \RuntimeException('BTCPay invoice amount does not match escrow amount.');
 
             $payment=data_get($invoice,'payments.0',[]);
             $txid=(string)($payment['transactionId']??$payment['id']??'');
