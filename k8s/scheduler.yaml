@@ -14,11 +14,22 @@ spec:
       template:
         spec:
           restartPolicy: OnFailure
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 33
+            runAsGroup: 33
+            fsGroup: 33
+            seccompProfile:
+              type: RuntimeDefault
           containers:
             - name: scheduler
               image: ghcr.io/faraimupfuti/kosher-market:latest
               imagePullPolicy: Always
               command: ["php", "artisan", "schedule:run"]
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop: ["ALL"]
               envFrom:
                 - configMapRef:
                     name: kosher-market-config
