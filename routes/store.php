@@ -29,8 +29,8 @@ Route::post('/change-store-language', [LanguageController::class, 'changeLanguag
 Route::post('/cart/apply-coupon', [CartController::class, 'applyCoupon'])->name('cart.applyCoupon');
 Route::post('/cart/remove-coupon', [CartController::class, 'removeCoupon'])->name('cart.removeCoupon');
 Route::get('/products', [ShopController::class, 'index'])->name('shop.index');
-Route::get('/search-suggestions', [SearchController::class, 'suggestions']);
-Route::get('/search', [SearchController::class, 'searchResults']);
+Route::get('/search-suggestions', [SearchController::class, 'suggestions'])->name('search.suggestions');
+Route::get('/search', [SearchController::class, 'searchResults'])->name('search.results');
 Route::get('/get-variant-price', [ProductController::class, 'getVariantPrice'])->name('product.variant.price');
 Route::get('/category/{slug}', [CategoryController::class, 'show'])->name('category.show');
 Route::post('/product/review/store', [ReviewController::class, 'store'])->middleware('auth.customer')->name('review.store');
