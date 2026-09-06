@@ -6,8 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class Conversation extends Model
 {
-    protected $fillable = ['customer_id', 'vendor_id', 'product_id', 'order_id', 'last_message_at'];
-    protected $casts = ['last_message_at' => 'datetime'];
+    protected $fillable = ['customer_id', 'vendor_id', 'product_id', 'order_id', 'last_message_at', 'blocked_by_customer_at', 'blocked_by_vendor_at'];
+    protected $casts = ['last_message_at' => 'datetime', 'blocked_by_customer_at' => 'datetime', 'blocked_by_vendor_at' => 'datetime'];
 
     public function customer() { return $this->belongsTo(Customer::class); }
     public function vendor() { return $this->belongsTo(Vendor::class); }
@@ -21,5 +21,10 @@ class Conversation extends Model
             ->when($guard === 'customer', fn ($q) => $q->whereNotNull('sender_vendor_id'))
             ->when($guard === 'vendor', fn ($q) => $q->whereNotNull('sender_customer_id'))
             ->count();
+    }
+
+    public function isBlockedFor(string $guard): bool
+    {
+        return $guard === 'customer' ? $this->blocked_by_customer_at !== null : $this->blocked_by_vendor_at !== null;
     }
 }
