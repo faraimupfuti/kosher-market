@@ -14,6 +14,7 @@ use App\Http\Controllers\Store\ProductController;
 use App\Http\Controllers\Store\ReviewController;
 use App\Http\Controllers\Store\SearchController;
 use App\Http\Controllers\Store\ShopController;
+use App\Http\Controllers\Store\WishlistController;
 use App\Http\Controllers\StoreController;
 use Illuminate\Support\Facades\Route;
 
