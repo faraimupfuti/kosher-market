@@ -18,6 +18,13 @@ spec:
       labels:
         app: kosher-market-web
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 33
+        runAsGroup: 33
+        fsGroup: 33
+        seccompProfile:
+          type: RuntimeDefault
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: kubernetes.io/hostname
@@ -30,6 +37,10 @@ spec:
           image: ghcr.io/faraimupfuti/kosher-market:latest
           imagePullPolicy: Always
           command: ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           ports:
             - containerPort: 8000
           envFrom:
