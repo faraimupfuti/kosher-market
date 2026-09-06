@@ -45,7 +45,7 @@ class BitcoinEscrowService
         $buyerId = $order->customer?->id;
         if (!$vendorId || !$buyerId) throw new RuntimeException('The order must have a customer and vendor.');
         if (strtoupper((string) ($order->currency ?? '')) !== 'BTC') throw new RuntimeException('Kosher Market accepts Bitcoin only.');
-        $satoshis = $this->btcToSatoshis($order->total_price);
+        $satoshis = $this->btcToSatoshis($order->total_amount);
         if ($satoshis <= 0) throw new RuntimeException('Invalid BTC escrow amount.');
         $feeSatoshis = $this->feeSatoshis($satoshis);
         $sellerSatoshis = $satoshis - $feeSatoshis;
@@ -99,27 +99,9 @@ class BitcoinEscrowService
 
             $feeSatoshis = $this->btcToSatoshis($escrow->platform_fee);
             $reference = 'SALE-COMMISSION-ESCROW-'.$escrow->id;
-
             $escrow->update(['status' => 'released', 'released_at' => now(), 'release_note' => $note]);
-            if (!$escrow->ledgerEntries()->where('type', 'seller_payout_due')->exists()) {
-                EscrowLedgerEntry::create(['escrow_transaction_id' => $escrow->id, 'type' => 'seller_payout_due', 'amount' => $escrow->seller_amount, 'currency' => 'BTC', 'reference' => 'ESCROW-'.$escrow->id]);
-            }
-
-            PlatformRevenueEntry::firstOrCreate(
-                ['reference' => $reference],
-                [
-                    'type' => 'sale_commission',
-                    'vendor_id' => $escrow->vendor_id,
-                    'order_id' => $escrow->order_id,
-                    'escrow_transaction_id' => $escrow->id,
-                    'amount_btc' => $this->satoshisToBtc($feeSatoshis),
-                    'amount_satoshis' => $feeSatoshis,
-                    'status' => 'earned',
-                    'description' => '3% Kosher Market commission earned when escrow was released.',
-                    'earned_at' => now(),
-                ]
-            );
-
+            if (!$escrow->ledgerEntries()->where('type', 'seller_payout_due')->exists()) EscrowLedgerEntry::create(['escrow_transaction_id' => $escrow->id, 'type' => 'seller_payout_due', 'amount' => $escrow->seller_amount, 'currency' => 'BTC', 'reference' => 'ESCROW-'.$escrow->id]);
+            PlatformRevenueEntry::firstOrCreate(['reference' => $reference], ['type' => 'sale_commission', 'vendor_id' => $escrow->vendor_id, 'order_id' => $escrow->order_id, 'escrow_transaction_id' => $escrow->id, 'amount_btc' => $this->satoshisToBtc($feeSatoshis), 'amount_satoshis' => $feeSatoshis, 'status' => 'earned', 'description' => '3% Kosher Market commission earned when escrow was released.', 'earned_at' => now()]);
             BitcoinSettlement::firstOrCreate(['escrow_transaction_id' => $escrow->id, 'type' => 'seller_payout'], ['vendor_id' => $escrow->vendor_id, 'amount' => $escrow->seller_amount, 'currency' => 'BTC', 'destination_address' => $escrow->vendor->bitcoin_payout_address, 'status' => 'pending']);
             return $escrow;
         });
