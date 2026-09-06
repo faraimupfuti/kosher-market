@@ -12,7 +12,7 @@ class AuditAdminActions
     public function handle(Request $request, Closure $next): Response
     {
         $response = $next($request);
-        if ($request->user() && $request->route()) {
+        if (str_starts_with(ltrim($request->path(), '/'), 'admin/') && $request->user() && $request->route()) {
             AuditLog::create([
                 'actor_type' => get_class($request->user()),
                 'actor_id' => $request->user()->getKey(),
