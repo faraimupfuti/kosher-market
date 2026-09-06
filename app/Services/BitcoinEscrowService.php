@@ -23,20 +23,9 @@ class BitcoinEscrowService
         return $satoshis;
     }
 
-    private function satoshisToBtc(int $satoshis): string
-    {
-        return BitcoinAmount::fromSatoshis($satoshis);
-    }
-
-    private function normalizeBtcAmount(string|int|float $amount): string
-    {
-        return $this->satoshisToBtc($this->btcToSatoshis($amount));
-    }
-
-    private function feeSatoshis(int $satoshis): int
-    {
-        return BitcoinAmount::percentOf($satoshis, (string) config('escrow.platform_fee_percent', '3.00'));
-    }
+    private function satoshisToBtc(int $satoshis): string { return BitcoinAmount::fromSatoshis($satoshis); }
+    private function normalizeBtcAmount(string|int|float $amount): string { return $this->satoshisToBtc($this->btcToSatoshis($amount)); }
+    private function feeSatoshis(int $satoshis): int { return BitcoinAmount::percentOf($satoshis, (string) config('escrow.platform_fee_percent', '3.00')); }
 
     public function createForOrder(Order $order): EscrowTransaction
     {
@@ -65,7 +54,10 @@ class BitcoinEscrowService
             $existing = Http::timeout(20)->withToken($apiKey)->acceptJson()->get($baseUrl.'/api/v1/stores/'.$storeId.'/invoices/'.$escrow->btcpay_invoice_id);
             if ($existing->successful()) return $existing->json();
         }
-        $response = Http::timeout(20)->withToken($apiKey)->acceptJson()->post($baseUrl.'/api/v1/stores/'.$storeId.'/invoices', ['amount' => $this->normalizeBtcAmount($escrow->amount), 'currency' => 'BTC', 'metadata' => ['orderId' => (string) $escrow->order_id, 'escrowId' => (string) $escrow->id, 'platform' => 'kosher-market']]);
+        $response = Http::timeout(20)->withToken($apiKey)->acceptJson()->post($baseUrl.'/api/v1/stores/'.$storeId.'/invoices', [
+            'amount' => $this->normalizeBtcAmount($escrow->amount), 'currency' => 'BTC',
+            'metadata' => ['orderId' => (string) $escrow->order_id, 'escrowId' => (string) $escrow->id, 'platform' => 'kosher-market'],
+        ]);
         if ($response->failed()) throw new RuntimeException('BTCPay invoice creation failed.');
         $invoice = $response->json();
         $escrow->update(['btcpay_invoice_id' => $invoice['id'] ?? null, 'bitcoin_payment_address' => data_get($invoice, 'addresses.BTC')]);
@@ -83,6 +75,7 @@ class BitcoinEscrowService
             if (in_array($escrow->status, ['released', 'paid', 'refund_pending', 'refunded', 'cancelled'], true)) return $escrow;
             if ($escrow->bitcoin_txid && !hash_equals($escrow->bitcoin_txid, $txid)) throw new RuntimeException('Escrow already has a different transaction.');
             $amount = $this->normalizeBtcAmount($btcAmount);
+            $escrow->transitionTo('funded');
             $escrow->update(['status' => 'funded', 'bitcoin_txid' => $txid, 'bitcoin_amount' => $amount, 'bitcoin_confirmations' => $confirmations, 'payment_detected_at' => $escrow->payment_detected_at ?: now(), 'payment_confirmed_at' => now(), 'funded_at' => $escrow->funded_at ?: now(), 'release_due_at' => $escrow->release_due_at ?: now()->addDays((int) config('escrow.hold_days', 3))]);
             if (!$escrow->ledgerEntries()->where('reference', $txid)->exists()) EscrowLedgerEntry::create(['escrow_transaction_id' => $escrow->id, 'type' => 'escrow_funded', 'amount' => $amount, 'currency' => 'BTC', 'reference' => $txid, 'metadata' => ['confirmations' => $confirmations]]);
             return $escrow;
@@ -93,12 +86,12 @@ class BitcoinEscrowService
     {
         return DB::transaction(function () use ($escrow, $note) {
             $escrow = EscrowTransaction::with('vendor', 'order')->whereKey($escrow->id)->lockForUpdate()->firstOrFail();
-            if ($escrow->status !== 'funded') throw new RuntimeException('Only funded escrow can be released.');
+            if (!$escrow->canTransitionTo('released')) throw new RuntimeException('Only funded or dispute-eligible escrow can be released.');
             if (!$escrow->vendor?->bitcoin_payout_address) throw new RuntimeException('Vendor has not configured a Bitcoin payout address.');
             if (!$escrow->vendor?->bitcoin_payout_address_verified_at) throw new RuntimeException('Vendor Bitcoin payout address must be verified before release.');
-
             $feeSatoshis = $this->btcToSatoshis($escrow->platform_fee);
             $reference = 'SALE-COMMISSION-ESCROW-'.$escrow->id;
+            $escrow->transitionTo('released');
             $escrow->update(['status' => 'released', 'released_at' => now(), 'release_note' => $note]);
             if (!$escrow->ledgerEntries()->where('type', 'seller_payout_due')->exists()) EscrowLedgerEntry::create(['escrow_transaction_id' => $escrow->id, 'type' => 'seller_payout_due', 'amount' => $escrow->seller_amount, 'currency' => 'BTC', 'reference' => 'ESCROW-'.$escrow->id]);
             PlatformRevenueEntry::firstOrCreate(['reference' => $reference], ['type' => 'sale_commission', 'vendor_id' => $escrow->vendor_id, 'order_id' => $escrow->order_id, 'escrow_transaction_id' => $escrow->id, 'amount_btc' => $this->satoshisToBtc($feeSatoshis), 'amount_satoshis' => $feeSatoshis, 'status' => 'earned', 'description' => '3% Kosher Market commission earned when escrow was released.', 'earned_at' => now()]);
@@ -111,7 +104,8 @@ class BitcoinEscrowService
     {
         return DB::transaction(function () use ($escrow, $note) {
             $escrow = EscrowTransaction::whereKey($escrow->id)->lockForUpdate()->firstOrFail();
-            if (!in_array($escrow->status, ['funded', 'disputed'], true)) throw new RuntimeException('Only funded or disputed escrow can be refunded.');
+            if (!$escrow->canTransitionTo('refund_pending')) throw new RuntimeException('Only funded or disputed escrow can be refunded.');
+            $escrow->transitionTo('refund_pending');
             $escrow->update(['status' => 'refund_pending', 'refund_note' => $note]);
             if (!$escrow->ledgerEntries()->where('type', 'buyer_refund_due')->exists()) EscrowLedgerEntry::create(['escrow_transaction_id' => $escrow->id, 'type' => 'buyer_refund_due', 'amount' => $escrow->bitcoin_amount ?? $escrow->amount, 'currency' => 'BTC', 'reference' => 'REFUND-'.$escrow->id]);
             BitcoinSettlement::firstOrCreate(['escrow_transaction_id' => $escrow->id, 'type' => 'buyer_refund'], ['vendor_id' => null, 'amount' => $escrow->bitcoin_amount ?? $escrow->amount, 'currency' => 'BTC', 'status' => 'needs_destination']);
@@ -168,7 +162,10 @@ class BitcoinEscrowService
         $settlement->update(['status' => $state, 'bitcoin_txid' => $txid ?: $settlement->bitcoin_txid, 'completed_at' => $state === 'completed' ? ($settlement->completed_at ?: now()) : $settlement->completed_at]);
         if ($state === 'completed') {
             $escrow = $settlement->escrow()->first();
-            if ($escrow) $escrow->update($settlement->type === 'seller_payout' ? ['status' => 'paid'] : ['status' => 'refunded', 'refunded_at' => $escrow->refunded_at ?: now()]);
+            if ($escrow) {
+                if ($settlement->type === 'seller_payout' && $escrow->canTransitionTo('paid')) $escrow->update(['status' => 'paid']);
+                if ($settlement->type !== 'seller_payout' && $escrow->canTransitionTo('refunded')) $escrow->update(['status' => 'refunded', 'refunded_at' => $escrow->refunded_at ?: now()]);
+            }
         }
         return $settlement->fresh();
     }
