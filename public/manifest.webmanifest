@@ -1,0 +1,10 @@
+{
+  "name": "Kosher Market",
+  "short_name": "Kosher Market",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#111827",
+  "description": "Bitcoin marketplace with escrow and buyer protection",
+  "icons": []
+}
