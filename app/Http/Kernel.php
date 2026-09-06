@@ -48,5 +48,6 @@ class Kernel extends HttpKernel
         'auth.vendor' => \App\Http\Middleware\AuthenticateVendor::class,
         'auth.customer' => \App\Http\Middleware\AuthenticateCustomer::class,
         'vendor.can_sell' => \App\Http\Middleware\EnsureVendorCanSell::class,
+        'audit.admin' => \App\Http\Middleware\AuditAdminActions::class,
     ];
 }
