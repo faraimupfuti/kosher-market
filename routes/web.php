@@ -140,6 +140,7 @@ Route::middleware(['auth:vendor', 'vendor.can_sell'])->prefix('vendor')->name('v
 Route::middleware(['auth:customer'])->group(function () {
     Route::get('/chat', [ChatController::class, 'index'])->name('chat.index');
     Route::post('/chat/vendor/{vendor}', [ChatController::class, 'start'])->name('chat.start');
+    Route::get('/chat/{conversation}/messages', [ChatController::class, 'messages'])->name('chat.messages');
     Route::get('/chat/{conversation}', [ChatController::class, 'show'])->name('chat.show');
     Route::post('/chat/{conversation}/messages', [ChatController::class, 'send'])->name('chat.send');
     Route::get('/checkout', [BitcoinCheckoutController::class, 'index'])->name('checkout.index');
@@ -149,6 +150,7 @@ Route::middleware(['auth:customer'])->group(function () {
 
 Route::middleware(['auth:vendor'])->group(function () {
     Route::get('/vendor/chat', [ChatController::class, 'index'])->name('vendor.chat.index');
+    Route::get('/vendor/chat/{conversation}/messages', [ChatController::class, 'messages'])->name('vendor.chat.messages');
     Route::get('/vendor/chat/{conversation}', [ChatController::class, 'show'])->name('vendor.chat.show');
     Route::post('/vendor/chat/{conversation}/messages', [ChatController::class, 'send'])->name('vendor.chat.send');
 });
