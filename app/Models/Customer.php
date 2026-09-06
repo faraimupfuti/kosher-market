@@ -10,38 +10,12 @@ use Laravel\Sanctum\HasApiTokens;
 class Customer extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
-
-    protected $fillable = [
-        'name',
-        'email',
-        'password',
-        'phone',
-        'address',
-        'status',
-        'profile_image',
-    ];
-
-    protected $hidden = [
-        'password',
-    ];
-
-    protected $casts = [
-        'password' => 'hashed',
-    ];
-
-    public function wishlists()
-    {
-        return $this->hasMany(Wishlist::class);
-    }
-
-    public function wishlistProducts()
-    {
-        return $this->belongsToMany(Product::class, 'wishlists', 'customer_id', 'product_id')
-            ->withTimestamps();
-    }
-
-    public function reviews()
-    {
-        return $this->hasMany(ProductReview::class);
-    }
+    protected $fillable = ['name','email','password','phone','address','status','profile_image'];
+    protected $hidden = ['password'];
+    protected $casts = ['password' => 'hashed'];
+    public function wishlists(){return $this->hasMany(Wishlist::class);}
+    public function wishlistProducts(){return $this->belongsToMany(Product::class,'wishlists','customer_id','product_id')->withTimestamps();}
+    public function reviews(){return $this->hasMany(ProductReview::class);}
+    public function savedSearches(){return $this->hasMany(SavedSearch::class);}
+    public function disputes(){return $this->hasMany(Dispute::class);}
 }
