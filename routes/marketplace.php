@@ -13,7 +13,7 @@ Route::middleware('auth:customer')->group(function () {
     Route::get('/orders/{order}/tracking', [OrderTrackingController::class, 'show'])->name('orders.tracking');
 });
 
-Route::middleware('auth:vendor')->group(function () {
+Route::prefix('vendor')->middleware('auth:vendor')->group(function () {
     Route::get('/disputes', [DisputeController::class, 'index'])->name('vendor.disputes.index');
     Route::get('/disputes/{dispute}', [DisputeController::class, 'show'])->name('vendor.disputes.show');
     Route::post('/disputes/{dispute}/respond', [DisputeController::class, 'respond'])->name('disputes.respond');
