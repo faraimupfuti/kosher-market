@@ -36,12 +36,24 @@ class BitcoinAmountTest extends TestCase
         $this->assertSame(0, BitcoinAmount::percentOf(10_000_000, '0'));
     }
 
-    public function test_negative_or_over_precision_btc_amounts_are_rejected(): void
+    /**
+     * @dataProvider invalidBtcAmounts
+     */
+    public function test_invalid_btc_amounts_are_rejected(string $amount): void
     {
-        foreach (['-0.1', '0.000000001', '01.0', '1.', 'abc'] as $amount) {
-            $this->expectException(InvalidArgumentException::class);
-            BitcoinAmount::toSatoshis($amount);
-        }
+        $this->expectException(InvalidArgumentException::class);
+        BitcoinAmount::toSatoshis($amount);
+    }
+
+    public static function invalidBtcAmounts(): array
+    {
+        return [
+            'negative' => ['-0.1'],
+            'too precise' => ['0.000000001'],
+            'leading zero' => ['01.0'],
+            'trailing decimal' => ['1.'],
+            'non numeric' => ['abc'],
+        ];
     }
 
     public function test_negative_satoshis_are_rejected(): void
@@ -50,11 +62,21 @@ class BitcoinAmountTest extends TestCase
         BitcoinAmount::fromSatoshis(-1);
     }
 
-    public function test_invalid_fee_percentage_is_rejected(): void
+    /**
+     * @dataProvider invalidFeePercentages
+     */
+    public function test_invalid_fee_percentages_are_rejected(string $percent): void
     {
-        foreach (['-1', '3.00001', 'abc'] as $percent) {
-            $this->expectException(InvalidArgumentException::class);
-            BitcoinAmount::percentOf(1000, $percent);
-        }
+        $this->expectException(InvalidArgumentException::class);
+        BitcoinAmount::percentOf(1000, $percent);
+    }
+
+    public static function invalidFeePercentages(): array
+    {
+        return [
+            'negative' => ['-1'],
+            'too precise' => ['3.00001'],
+            'non numeric' => ['abc'],
+        ];
     }
 }
