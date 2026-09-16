@@ -10,7 +10,7 @@ permissions:
   contents: write
 
 jobs:
-  resolve-lock:
+  normalize:
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
@@ -24,21 +24,25 @@ jobs:
           coverage: none
       - name: Resolve Composer dependencies
         run: composer update --with-all-dependencies --prefer-dist --no-progress --no-interaction
-      - name: Commit regenerated lock file
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress --no-interaction
+      - name: Apply Laravel Pint formatting
+        run: vendor/bin/pint
+      - name: Commit synchronized dependencies and formatting
         run: |
-          if git diff --quiet -- composer.lock; then
-            echo "composer.lock is already synchronized."
+          if git diff --quiet; then
+            echo "Working tree is already normalized."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add composer.lock
-          git commit -m "Regenerate Composer lockfile"
+          git add composer.lock app bootstrap config database routes tests
+          git commit -m "Normalize Composer lockfile and PHP formatting"
           git push
 
   build:
-    if: github.event_name == 'pull_request' || github.event.head_commit.message != 'Regenerate Composer lockfile'
-    needs: resolve-lock
+    if: github.event_name == 'pull_request' || needs.normalize.result == 'success' && github.event.head_commit.message != 'Normalize Composer lockfile and PHP formatting'
+    needs: normalize
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -49,14 +53,14 @@ jobs:
           coverage: none
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
       - run: composer install --prefer-dist --no-progress --no-interaction
       - run: npm ci --no-audit --no-fund
       - run: npm run build
 
   lint:
-    if: github.event_name == 'pull_request' || github.event.head_commit.message != 'Regenerate Composer lockfile'
-    needs: resolve-lock
+    if: github.event_name == 'pull_request' || needs.normalize.result == 'success' && github.event.head_commit.message != 'Normalize Composer lockfile and PHP formatting'
+    needs: normalize
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -69,8 +73,8 @@ jobs:
       - run: vendor/bin/pint --test
 
   test:
-    if: github.event_name == 'pull_request' || github.event.head_commit.message != 'Regenerate Composer lockfile'
-    needs: resolve-lock
+    if: github.event_name == 'pull_request' || needs.normalize.result == 'success' && github.event.head_commit.message != 'Normalize Composer lockfile and PHP formatting'
+    needs: normalize
     runs-on: ubuntu-latest
     services:
       mysql:
