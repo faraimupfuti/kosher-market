@@ -71,7 +71,7 @@ Payout       ▼         ▼
 - **Database:** MySQL 8-compatible relational database
 - **Bitcoin payments:** BTCPay Server
 - **Authentication:** Laravel authentication stack
-- **Deployment:** Docker, Kubernetes and compatible hosting
+- **Deployment:** Docker and Docker Compose
 
 ## Validation
 
@@ -87,6 +87,69 @@ php artisan test
 ```
 
 For Bitcoin functionality, automated application tests are not a substitute for a BTCPay integration/testnet validation cycle.
+
+## Docker deployment
+
+Kosher Market runs as a Docker Compose application. The Compose stack provides the Laravel web application, queue worker, scheduler, MySQL database and Redis service.
+
+### 1. Configure the environment
+
+```bash
+cp .env.docker.example .env
+```
+
+Review the `.env` values before starting the stack. Never commit `.env`, wallet credentials, private keys or webhook secrets.
+
+### 2. Build and start the application
+
+```bash
+docker compose build
+docker compose up -d
+```
+
+The Laravel application will be available at:
+
+```text
+http://localhost:8000
+```
+
+### 3. Run database migrations
+
+```bash
+docker compose exec app php artisan migrate --force
+```
+
+### 4. View application logs
+
+```bash
+docker compose logs -f app
+```
+
+View all service logs with:
+
+```bash
+docker compose logs -f
+```
+
+### 5. Stop the application
+
+```bash
+docker compose down
+```
+
+To stop the stack while preserving its database, Redis and application-storage volumes:
+
+```bash
+docker compose down
+```
+
+To remove the persistent Docker volumes as well, use:
+
+```bash
+docker compose down -v
+```
+
+**Warning:** removing the volumes deletes the local MySQL and Redis data stored by this Compose stack.
 
 ## Ubuntu local installation
 
@@ -195,14 +258,18 @@ Before accepting real Bitcoin, verify invoice creation, webhook HMAC verificatio
 
 **Do not use the application to hold real Bitcoin until the complete deployment, wallet, webhook, payout and recovery procedures have been independently tested.**
 
-## Docker
+## Docker services
 
-The repository supports containerized development/deployment with Laravel, queue workers, scheduler, Redis and MySQL services.
+The Docker Compose deployment uses the following services:
 
-## Kubernetes
+- **app** — Laravel web application
+- **queue** — Laravel queue worker
+- **scheduler** — Laravel scheduler
+- **mysql** — MySQL 8 database
+- **redis** — Redis 7 cache/queue backend
 
-The target architecture supports Laravel web replicas, queue workers, scheduler, Redis and MySQL StatefulSet storage behind an ingress. Before production use, configure persistent volumes, health probes, resource limits, PodDisruptionBudgets, secrets management, database backups and a tested restore procedure.
+The application container is built from `Dockerfile.local` by the Compose development/testing stack, while `Dockerfile` provides the production-oriented application image. The container build compiles the Vite frontend and installs the PHP dependencies inside the image.
 
 ## Project status
 
-Kosher Market is under active development. The core marketplace, Bitcoin escrow, payment, dispute, settlement, vendor trust, search, tracking and Kubernetes architecture is being hardened before production use with real funds.
+Kosher Market is under active development. The core marketplace, Bitcoin escrow, payment, dispute, settlement, vendor trust, search and tracking functionality is being hardened before production use with real funds.
