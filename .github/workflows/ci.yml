@@ -48,7 +48,7 @@ jobs:
           php-version: '8.3'
           coverage: none
       - run: composer validate --strict
-      - run: composer audit --no-interaction
+      - run: composer audit --locked --no-interaction
 
   test:
     runs-on: ubuntu-latest
