@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Store;
 
 use App\Http\Controllers\Controller;
+use App\Models\AttributeValue;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Services\Store\CartService;
@@ -51,7 +52,7 @@ class CartController extends Controller
 
         $attributePairs = [];
         foreach ($attributeValueIds as $attributeValueId) {
-            $attributeValue = \App\Models\AttributeValue::with('attribute')->find($attributeValueId);
+            $attributeValue = AttributeValue::with('attribute')->find($attributeValueId);
             if ($attributeValue && $attributeValue->attribute) {
                 $attributePairs[$attributeValue->attribute->id] = $attributeValue->id;
             }

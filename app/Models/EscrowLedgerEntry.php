@@ -17,6 +17,13 @@ class EscrowLedgerEntry extends Model
     // Bitcoin ledger amounts require the full 8 decimal places.
     protected $casts = ['amount' => 'decimal:8', 'metadata' => 'array'];
 
-    public function escrowTransaction() { return $this->belongsTo(EscrowTransaction::class); }
-    public function user() { return $this->belongsTo(User::class); }
+    public function escrowTransaction()
+    {
+        return $this->belongsTo(EscrowTransaction::class);
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }

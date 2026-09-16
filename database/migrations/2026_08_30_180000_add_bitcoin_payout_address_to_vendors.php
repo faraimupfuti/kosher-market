@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        if (Schema::hasTable('vendors') && !Schema::hasColumn('vendors', 'bitcoin_payout_address')) {
+        if (Schema::hasTable('vendors') && ! Schema::hasColumn('vendors', 'bitcoin_payout_address')) {
             Schema::table('vendors', function (Blueprint $table) {
                 $table->string('bitcoin_payout_address', 120)->nullable()->after('phone');
                 $table->timestamp('bitcoin_payout_address_verified_at')->nullable()->after('bitcoin_payout_address');

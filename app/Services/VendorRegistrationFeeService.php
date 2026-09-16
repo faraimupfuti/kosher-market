@@ -5,9 +5,8 @@ namespace App\Services;
 use App\Models\PlatformRevenueEntry;
 use App\Models\Vendor;
 use App\Models\VendorRegistrationFee;
-use App\Services\BitcoinAmount;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
 class VendorRegistrationFeeService
@@ -18,12 +17,16 @@ class VendorRegistrationFeeService
             ['vendor_id' => $vendor->id],
             ['usd_amount' => config('bitcoin.vendor_registration_usd', '200.00'), 'currency' => 'BTC', 'status' => 'pending']
         );
-        if ($fee->status === 'paid') return $fee;
+        if ($fee->status === 'paid') {
+            return $fee;
+        }
 
         [$baseUrl, $storeId, $apiKey] = $this->btcpayConfig();
         if ($fee->btcpay_invoice_id) {
             $existing = Http::timeout(20)->withToken($apiKey)->acceptJson()->get($baseUrl.'/api/v1/stores/'.$storeId.'/invoices/'.$fee->btcpay_invoice_id);
-            if ($existing->successful()) return $this->syncInvoice($fee, $existing->json());
+            if ($existing->successful()) {
+                return $this->syncInvoice($fee, $existing->json());
+            }
         }
 
         // USD is only the fixed commercial denomination. The vendor pays BTC.
@@ -39,7 +42,10 @@ class VendorRegistrationFeeService
                 ],
             ]
         );
-        if ($response->failed()) throw new RuntimeException('BTCPay vendor registration invoice creation failed.');
+        if ($response->failed()) {
+            throw new RuntimeException('BTCPay vendor registration invoice creation failed.');
+        }
+
         return $this->syncInvoice($fee, $response->json());
     }
 
@@ -54,15 +60,21 @@ class VendorRegistrationFeeService
             'status' => $status === 'Settled' ? 'paid' : $fee->status,
             'paid_at' => $status === 'Settled' ? ($fee->paid_at ?: now()) : $fee->paid_at,
         ]);
+
         return $fee->fresh();
     }
 
     public function markPaid(VendorRegistrationFee $fee, string $txid, int $confirmations, string|int|float $btcAmount): VendorRegistrationFee
     {
-        if ($confirmations < (int) config('bitcoin.required_confirmations', 1)) return $fee;
+        if ($confirmations < (int) config('bitcoin.required_confirmations', 1)) {
+            return $fee;
+        }
+
         return DB::transaction(function () use ($fee, $txid, $confirmations, $btcAmount) {
             $locked = VendorRegistrationFee::whereKey($fee->id)->lockForUpdate()->firstOrFail();
-            if ($locked->status === 'paid') return $locked;
+            if ($locked->status === 'paid') {
+                return $locked;
+            }
 
             $receivedSatoshis = BitcoinAmount::toSatoshis((string) $btcAmount);
             if ($locked->btc_amount !== null && $receivedSatoshis !== BitcoinAmount::toSatoshis((string) $locked->btc_amount)) {
@@ -99,8 +111,12 @@ class VendorRegistrationFeeService
     private function btcpayConfig(): array
     {
         $baseUrl = rtrim((string) config('bitcoin.btcpay_url'), '/');
-        $storeId = config('bitcoin.btcpay_store_id'); $apiKey = config('bitcoin.btcpay_api_key');
-        if (!$baseUrl || !$storeId || !$apiKey) throw new RuntimeException('BTCPay Server is not configured.');
+        $storeId = config('bitcoin.btcpay_store_id');
+        $apiKey = config('bitcoin.btcpay_api_key');
+        if (! $baseUrl || ! $storeId || ! $apiKey) {
+            throw new RuntimeException('BTCPay Server is not configured.');
+        }
+
         return [$baseUrl, $storeId, $apiKey];
     }
 }

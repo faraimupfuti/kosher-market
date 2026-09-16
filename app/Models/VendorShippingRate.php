@@ -17,5 +17,8 @@ class VendorShippingRate extends Model
         'enabled' => 'boolean',
     ];
 
-    public function zone() { return $this->belongsTo(VendorShippingZone::class, 'shipping_zone_id'); }
+    public function zone()
+    {
+        return $this->belongsTo(VendorShippingZone::class, 'shipping_zone_id');
+    }
 }

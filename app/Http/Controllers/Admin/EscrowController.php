@@ -22,9 +22,11 @@ class EscrowController extends Controller
         try {
             $released = $service->release($escrow, $request->input('note', 'Released by administrator.'));
             $settlement = $payouts->forReleasedEscrow($released->fresh());
+
             return response()->json(['escrow' => $released->fresh(), 'settlement' => $settlement]);
         } catch (Throwable $e) {
             report($e);
+
             return response()->json(['message' => $e->getMessage()], 422);
         }
     }
@@ -70,6 +72,7 @@ class EscrowController extends Controller
             return response()->json(['success' => true, 'dispute' => $dispute->fresh()]);
         } catch (Throwable $e) {
             report($e);
+
             return response()->json(['message' => $e->getMessage()], 422);
         }
     }

@@ -9,9 +9,7 @@ class ChatMessageNotification extends Notification
 {
     use Queueable;
 
-    public function __construct(public int $conversationId, public string $senderName, public string $preview)
-    {
-    }
+    public function __construct(public int $conversationId, public string $senderName, public string $preview) {}
 
     public function via(object $notifiable): array
     {

@@ -19,7 +19,18 @@ class PlatformRevenueEntry extends Model
         'reversed_at' => 'datetime',
     ];
 
-    public function vendor() { return $this->belongsTo(Vendor::class); }
-    public function order() { return $this->belongsTo(Order::class); }
-    public function escrowTransaction() { return $this->belongsTo(EscrowTransaction::class); }
+    public function vendor()
+    {
+        return $this->belongsTo(Vendor::class);
+    }
+
+    public function order()
+    {
+        return $this->belongsTo(Order::class);
+    }
+
+    public function escrowTransaction()
+    {
+        return $this->belongsTo(EscrowTransaction::class);
+    }
 }

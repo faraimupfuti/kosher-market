@@ -26,8 +26,12 @@ class ProductController extends Controller
         ]);
         $breadcrumbs = [];
         $category = $product->category;
-        while ($category) { $breadcrumbs[] = $category; $category = $category->parent; }
+        while ($category) {
+            $breadcrumbs[] = $category;
+            $category = $category->parent;
+        }
         $breadcrumbs = array_reverse($breadcrumbs);
+
         return view('themes.xylo.product-detail', compact('product', 'inStock', 'variantMap', 'breadcrumbs'));
     }
 
@@ -36,13 +40,17 @@ class ProductController extends Controller
         abort_unless($request->user('customer'), 401);
         $product = Product::where('slug', $slug)->where('status', 1)
             ->whereHas('vendor', fn ($q) => $q->where('status', 'active'))->firstOrFail();
+
         return redirect()->route('chat.start', ['vendor' => $product->vendor_id, 'product_id' => $product->id]);
     }
 
     public function getVariantPrice(Request $request)
     {
         $variant = ProductVariant::with('product')->where('id', $request->input('variant_id'))->where('product_id', $request->input('product_id'))->first();
-        if (!$variant) return response()->json(['success' => false]);
+        if (! $variant) {
+            return response()->json(['success' => false]);
+        }
+
         return response()->json([
             'success' => true,
             'price' => number_format($variant->converted_price, 2),

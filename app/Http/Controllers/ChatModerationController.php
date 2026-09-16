@@ -12,8 +12,12 @@ class ChatModerationController extends Controller
     {
         $customer = $request->user('customer');
         $vendor = $request->user('vendor');
-        if ($customer && (int) $conversation->customer_id === (int) $customer->id) return 'customer';
-        if ($vendor && (int) $conversation->vendor_id === (int) $vendor->id) return 'vendor';
+        if ($customer && (int) $conversation->customer_id === (int) $customer->id) {
+            return 'customer';
+        }
+        if ($vendor && (int) $conversation->vendor_id === (int) $vendor->id) {
+            return 'vendor';
+        }
         abort(403);
     }
 
@@ -21,6 +25,7 @@ class ChatModerationController extends Controller
     {
         $guard = $this->authorizeConversation($request, $conversation);
         $conversation->update([$guard === 'customer' ? 'blocked_by_customer_at' : 'blocked_by_vendor_at' => now()]);
+
         return back()->with('success', 'Conversation blocked.');
     }
 
@@ -28,6 +33,7 @@ class ChatModerationController extends Controller
     {
         $guard = $this->authorizeConversation($request, $conversation);
         $conversation->update([$guard === 'customer' ? 'blocked_by_customer_at' : 'blocked_by_vendor_at' => null]);
+
         return back()->with('success', 'Conversation unblocked.');
     }
 
@@ -45,6 +51,7 @@ class ChatModerationController extends Controller
             'reason' => $data['reason'],
             'details' => $data['details'] ?? null,
         ]);
+
         return back()->with('success', 'Report submitted for moderation.');
     }
 }

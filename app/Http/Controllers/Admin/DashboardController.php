@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\BitcoinSettlement;
 use App\Models\Customer;
+use App\Models\EscrowTransaction;
 use App\Models\Order;
 use App\Models\PlatformRevenueEntry;
 use App\Models\Vendor;
@@ -27,8 +29,8 @@ class DashboardController extends Controller
             'monthPlatformRevenueBtc' => (clone $revenue)->where('earned_at', '>=', $start)->sum('amount_btc'),
             'saleCommissionBtc' => (clone $revenue)->where('type', 'sale_commission')->sum('amount_btc'),
             'vendorOnboardingBtc' => (clone $revenue)->where('type', 'vendor_onboarding')->sum('amount_btc'),
-            'pendingEscrows' => \App\Models\EscrowTransaction::where('status', 'funded')->count(),
-            'pendingSettlements' => \App\Models\BitcoinSettlement::whereIn('status', ['pending', 'awaiting_approval', 'awaiting_payment', 'in_progress'])->count(),
+            'pendingEscrows' => EscrowTransaction::where('status', 'funded')->count(),
+            'pendingSettlements' => BitcoinSettlement::whereIn('status', ['pending', 'awaiting_approval', 'awaiting_payment', 'in_progress'])->count(),
         ];
 
         return view('admin.dashboard.index', compact('data'));

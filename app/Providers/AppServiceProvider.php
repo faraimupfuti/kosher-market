@@ -8,6 +8,8 @@ use App\Repositories\Admin\Banner\BannerRepository;
 use App\Repositories\Admin\Banner\BannerRepositoryInterface;
 use App\Repositories\Admin\Brand\BrandRepository;
 use App\Repositories\Admin\Brand\BrandRepositoryInterface;
+use App\Repositories\Admin\Category\CategoryRepository;
+use App\Repositories\Admin\Category\CategoryRepositoryInterface;
 use App\Repositories\Admin\Menu\MenuRepository;
 use App\Repositories\Admin\Menu\MenuRepositoryInterface;
 use App\Repositories\Admin\MenuItem\MenuItemRepository;
@@ -28,8 +30,8 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(
-            \App\Repositories\Admin\Category\CategoryRepositoryInterface::class,
-            \App\Repositories\Admin\Category\CategoryRepository::class
+            CategoryRepositoryInterface::class,
+            CategoryRepository::class
         );
 
         $this->app->singleton(ImageService::class, function ($app) {

@@ -17,7 +17,7 @@ class GlobalShippingService
     {
         $countryCode = strtoupper(trim($countryCode));
 
-        if ($product->shippingCountries()->exists() && !$product->shippingCountries()->where('code', $countryCode)->exists()) {
+        if ($product->shippingCountries()->exists() && ! $product->shippingCountries()->where('code', $countryCode)->exists()) {
             throw ValidationException::withMessages([
                 'shipping_country' => 'This product is not available for shipping to the selected country.',
             ]);

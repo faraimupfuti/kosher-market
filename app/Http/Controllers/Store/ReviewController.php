@@ -30,7 +30,7 @@ class ReviewController extends Controller
             ->where('status', 'completed')
             ->exists();
 
-        if (!$verifiedPurchase) {
+        if (! $verifiedPurchase) {
             return back()->with('error', 'You can review this product only after completing a purchase.');
         }
 

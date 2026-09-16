@@ -17,8 +17,8 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $data = $request->validate([
-            'pseudonym' => ['required','string','max:40'],
-            'password' => ['required','min:6'],
+            'pseudonym' => ['required', 'string', 'max:40'],
+            'password' => ['required', 'min:6'],
         ]);
 
         $key = 'vendor-login:'.strtolower($data['pseudonym']).'|'.$request->ip();
@@ -29,10 +29,12 @@ class AuthController extends Controller
         if (Auth::guard('vendor')->attempt(['pseudonym' => $data['pseudonym'], 'password' => $data['password']], $request->boolean('remember'))) {
             RateLimiter::clear($key);
             $request->session()->regenerate();
+
             return redirect()->route('vendor.dashboard');
         }
 
         RateLimiter::hit($key, 300);
+
         return back()->withErrors(['pseudonym' => 'Invalid pseudonym or password.'])->withInput();
     }
 
@@ -41,6 +43,7 @@ class AuthController extends Controller
         Auth::guard('vendor')->logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+
         return redirect()->route('vendor.login');
     }
 

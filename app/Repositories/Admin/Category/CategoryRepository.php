@@ -4,6 +4,7 @@ namespace App\Repositories\Admin\Category;
 
 use App\Models\Category;
 use App\Models\CategoryTranslation;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Str;
 
 class CategoryRepository implements CategoryRepositoryInterface
@@ -73,7 +74,7 @@ class CategoryRepository implements CategoryRepositoryInterface
         foreach ($translations as $languageCode => $translation) {
             $imagePath = null;
 
-            if (isset($translation['image']) && $translation['image'] instanceof \Illuminate\Http\UploadedFile) {
+            if (isset($translation['image']) && $translation['image'] instanceof UploadedFile) {
                 $imagePath = $translation['image']->store('categories', 'public');
             }
 
@@ -94,7 +95,7 @@ class CategoryRepository implements CategoryRepositoryInterface
         foreach ($translations as $languageCode => $translation) {
             $imagePath = $category->translations()->where('language_code', $languageCode)->value('image_url');
 
-            if (isset($translation['image']) && $translation['image'] instanceof \Illuminate\Http\UploadedFile) {
+            if (isset($translation['image']) && $translation['image'] instanceof UploadedFile) {
                 $imagePath = $translation['image']->store('categories', 'public');
             }
 

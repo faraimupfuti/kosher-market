@@ -7,6 +7,7 @@ use App\Models\ProductImage;
 use App\Models\Shop;
 use App\Services\Vendor\ImageService;
 use Exception;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Str;
 
 class ProductRepository implements ProductRepositoryInterface
@@ -61,7 +62,7 @@ class ProductRepository implements ProductRepositoryInterface
             'product_type' => $data['product_type'],
         ]);
 
-        if (isset($data['product_image_url']) && $data['product_image_url'] instanceof \Illuminate\Http\UploadedFile) {
+        if (isset($data['product_image_url']) && $data['product_image_url'] instanceof UploadedFile) {
             $imagePath = $this->imageService->uploadImage($data['product_image_url'], 'products');
 
             $productImage = new ProductImage([
@@ -83,7 +84,7 @@ class ProductRepository implements ProductRepositoryInterface
 
         $product = Product::findOrFail($id);
 
-        if (isset($data['image_url']) && $data['image_url'] instanceof \Illuminate\Http\UploadedFile) {
+        if (isset($data['image_url']) && $data['image_url'] instanceof UploadedFile) {
             if ($product->images->isNotEmpty()) {
                 $this->imageService->deleteImage($product->images->first()->image_url);
                 $product->images->first()->delete();

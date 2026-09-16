@@ -16,7 +16,18 @@ class EscrowDispute extends Model
 
     protected $casts = ['resolved_at' => 'datetime'];
 
-    public function escrowTransaction() { return $this->belongsTo(EscrowTransaction::class); }
-    public function opener() { return $this->belongsTo(User::class, 'opened_by'); }
-    public function resolver() { return $this->belongsTo(User::class, 'resolved_by'); }
+    public function escrowTransaction()
+    {
+        return $this->belongsTo(EscrowTransaction::class);
+    }
+
+    public function opener()
+    {
+        return $this->belongsTo(User::class, 'opened_by');
+    }
+
+    public function resolver()
+    {
+        return $this->belongsTo(User::class, 'resolved_by');
+    }
 }

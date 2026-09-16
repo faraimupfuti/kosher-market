@@ -3,6 +3,7 @@
 namespace App\Services\Admin;
 
 use App\Repositories\Admin\Brand\BrandRepositoryInterface;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -30,7 +31,7 @@ class BrandService
             }
         }
 
-        if (isset($data['logo_url']) && $data['logo_url'] instanceof \Illuminate\Http\UploadedFile) {
+        if (isset($data['logo_url']) && $data['logo_url'] instanceof UploadedFile) {
             $logoPath = $data['logo_url']->store('brands/logos', 'public');
         } else {
             $logoPath = null;
@@ -63,7 +64,7 @@ class BrandService
     {
         $brand = $this->brandRepository->find($id);
 
-        if (isset($data['logo_url']) && $data['logo_url'] instanceof \Illuminate\Http\UploadedFile) {
+        if (isset($data['logo_url']) && $data['logo_url'] instanceof UploadedFile) {
             if ($brand->logo_url && Storage::exists('public/'.$brand->logo_url)) {
                 Storage::delete('public/'.$brand->logo_url);
             }

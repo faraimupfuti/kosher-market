@@ -13,7 +13,18 @@ class Message extends Model
 
     protected $casts = ['read_at' => 'datetime', 'attachment_size' => 'integer'];
 
-    public function conversation() { return $this->belongsTo(Conversation::class); }
-    public function customer() { return $this->belongsTo(Customer::class, 'sender_customer_id'); }
-    public function vendor() { return $this->belongsTo(Vendor::class, 'sender_vendor_id'); }
+    public function conversation()
+    {
+        return $this->belongsTo(Conversation::class);
+    }
+
+    public function customer()
+    {
+        return $this->belongsTo(Customer::class, 'sender_customer_id');
+    }
+
+    public function vendor()
+    {
+        return $this->belongsTo(Vendor::class, 'sender_vendor_id');
+    }
 }

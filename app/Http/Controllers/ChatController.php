@@ -22,6 +22,7 @@ class ChatController extends Controller
             ->when($guard === 'vendor', fn ($q) => $q->where('vendor_id', $user->id))
             ->withCount(['messages as unread_count' => fn ($q) => $q->whereNull('read_at')->when($guard === 'customer', fn ($q) => $q->whereNotNull('sender_vendor_id'))->when($guard === 'vendor', fn ($q) => $q->whereNotNull('sender_customer_id'))])
             ->orderByDesc('last_message_at')->orderByDesc('id')->get();
+
         return view('chat.index', compact('conversations', 'guard'));
     }
 
@@ -31,15 +32,22 @@ class ChatController extends Controller
         $customer = $request->user('customer');
         abort_unless($customer, 403);
         $data = $request->validate(['order_id' => ['nullable', 'integer', 'exists:orders,id'], 'product_id' => ['nullable', 'integer', 'exists:products,id']]);
-        $orderId = !empty($data['order_id']) ? (int) $data['order_id'] : null;
-        $productId = !empty($data['product_id']) ? (int) $data['product_id'] : null;
-        if ($orderId) abort_unless($customer->orders()->whereKey($orderId)->where('vendor_id', $vendor->id)->exists(), 403);
-        if ($productId) Product::whereKey($productId)->where('vendor_id', $vendor->id)->where('status', 1)->firstOrFail();
+        $orderId = ! empty($data['order_id']) ? (int) $data['order_id'] : null;
+        $productId = ! empty($data['product_id']) ? (int) $data['product_id'] : null;
+        if ($orderId) {
+            abort_unless($customer->orders()->whereKey($orderId)->where('vendor_id', $vendor->id)->exists(), 403);
+        }
+        if ($productId) {
+            Product::whereKey($productId)->where('vendor_id', $vendor->id)->where('status', 1)->firstOrFail();
+        }
         $query = Conversation::where('customer_id', $customer->id)->where('vendor_id', $vendor->id);
         $orderId ? $query->where('order_id', $orderId) : $query->whereNull('order_id');
         $productId ? $query->where('product_id', $productId) : $query->whereNull('product_id');
         $conversation = $query->first();
-        if (!$conversation) $conversation = Conversation::create(['customer_id' => $customer->id, 'vendor_id' => $vendor->id, 'product_id' => $productId, 'order_id' => $orderId, 'last_message_at' => now()]);
+        if (! $conversation) {
+            $conversation = Conversation::create(['customer_id' => $customer->id, 'vendor_id' => $vendor->id, 'product_id' => $productId, 'order_id' => $orderId, 'last_message_at' => now()]);
+        }
+
         return redirect()->route('chat.show', $conversation);
     }
 
@@ -49,6 +57,7 @@ class ChatController extends Controller
         $conversation->load(['customer', 'vendor', 'product', 'order', 'messages' => fn ($q) => $q->oldest()]);
         $guard = $request->user('customer') ? 'customer' : 'vendor';
         $this->markInboundRead($conversation, $guard);
+
         return view('chat.show', compact('conversation', 'guard'));
     }
 
@@ -59,6 +68,7 @@ class ChatController extends Controller
         $after = max(0, (int) $request->integer('after'));
         $messages = $conversation->messages()->when($after > 0, fn ($q) => $q->where('id', '>', $after))->oldest()->limit(100)->get(['id', 'conversation_id', 'sender_customer_id', 'sender_vendor_id', 'body', 'attachment_path', 'attachment_name', 'attachment_mime', 'attachment_size', 'created_at', 'read_at']);
         $this->markInboundRead($conversation, $guard);
+
         return response()->json(['messages' => $messages, 'last_id' => $messages->last()?->id ?? $after]);
     }
 
@@ -67,6 +77,7 @@ class ChatController extends Controller
         $conversation = $message->conversation;
         $this->authorizeConversation($request, $conversation);
         abort_unless($message->attachment_path && Storage::disk('local')->exists($message->attachment_path), 404);
+
         return Storage::disk('local')->download($message->attachment_path, $message->attachment_name ?: basename($message->attachment_path), ['Content-Type' => $message->attachment_mime ?: 'application/octet-stream']);
     }
 
@@ -81,10 +92,13 @@ class ChatController extends Controller
         $vendor = $request->user('vendor');
         $guard = $customer ? 'customer' : 'vendor';
         abort_if($conversation->isBlockedFor($guard), 403, 'This conversation is blocked.');
-        if ($vendor && !$vendor->isSellingEnabled()) abort(403);
+        if ($vendor && ! $vendor->isSellingEnabled()) {
+            abort(403);
+        }
         $message = DB::transaction(function () use ($conversation, $validated, $customer, $vendor, $request) {
             $attachment = $request->file('attachment');
             $path = $attachment?->store('chat-attachments', 'local');
+
             return tap(Message::create([
                 'conversation_id' => $conversation->id,
                 'sender_customer_id' => $customer?->id,
@@ -100,7 +114,10 @@ class ChatController extends Controller
         $senderName = $customer ? ($customer->name ?: 'Customer') : ($vendor->pseudonym ?: $vendor->name ?: 'Vendor');
         $preview = trim((string) ($message->body ?: 'Sent an attachment'));
         $recipient?->notify(new ChatMessageNotification($conversation->id, $senderName, mb_substr($preview, 0, 160)));
-        if ($request->expectsJson()) return response()->json(['message' => $message->fresh()], 201);
+        if ($request->expectsJson()) {
+            return response()->json(['message' => $message->fresh()], 201);
+        }
+
         return redirect()->route($vendor ? 'vendor.chat.show' : 'chat.show', $conversation)->with('success', 'Message sent.');
     }
 

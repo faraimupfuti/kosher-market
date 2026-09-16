@@ -10,6 +10,7 @@ use Throwable;
 class SyncBitcoinSettlements extends Command
 {
     protected $signature = 'bitcoin:settlements-sync {--dry-run : Do not call BTCPay}';
+
     protected $description = 'Submit pending Bitcoin settlements to BTCPay and synchronize existing payout states';
 
     public function handle(BitcoinEscrowService $service): int
@@ -19,9 +20,17 @@ class SyncBitcoinSettlements extends Command
             ->orderBy('id')->chunkById(50, function ($settlements) use ($service, &$count) {
                 foreach ($settlements as $settlement) {
                     try {
-                        if ($this->option('dry-run')) { $this->line("Settlement #{$settlement->id}: {$settlement->status}"); continue; }
-                        if (!$settlement->btcpay_payout_id) {
-                            if (!$settlement->destination_address) { $this->warn("Settlement #{$settlement->id}: destination missing"); continue; }
+                        if ($this->option('dry-run')) {
+                            $this->line("Settlement #{$settlement->id}: {$settlement->status}");
+
+                            continue;
+                        }
+                        if (! $settlement->btcpay_payout_id) {
+                            if (! $settlement->destination_address) {
+                                $this->warn("Settlement #{$settlement->id}: destination missing");
+
+                                continue;
+                            }
                             $service->submitSettlement($settlement);
                         } else {
                             $service->syncSettlement($settlement);
@@ -34,6 +43,7 @@ class SyncBitcoinSettlements extends Command
             });
 
         $this->info("Processed {$count} settlement(s).");
+
         return self::SUCCESS;
     }
 }

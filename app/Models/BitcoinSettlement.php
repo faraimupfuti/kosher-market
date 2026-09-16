@@ -22,6 +22,13 @@ class BitcoinSettlement extends Model
         'completed_at' => 'datetime',
     ];
 
-    public function escrow() { return $this->belongsTo(EscrowTransaction::class, 'escrow_transaction_id'); }
-    public function vendor() { return $this->belongsTo(Vendor::class); }
+    public function escrow()
+    {
+        return $this->belongsTo(EscrowTransaction::class, 'escrow_transaction_id');
+    }
+
+    public function vendor()
+    {
+        return $this->belongsTo(Vendor::class);
+    }
 }

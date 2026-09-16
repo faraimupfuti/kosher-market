@@ -11,7 +11,7 @@ final class BitcoinAmount
     public static function toSatoshis(string|int|float $btc): int
     {
         $value = trim((string) $btc);
-        if (!preg_match('/^(?:0|[1-9]\d*)(?:\.\d{1,8})?$/', $value)) {
+        if (! preg_match('/^(?:0|[1-9]\d*)(?:\.\d{1,8})?$/', $value)) {
             throw new InvalidArgumentException('Invalid Bitcoin amount.');
         }
 
@@ -21,6 +21,7 @@ final class BitcoinAmount
         if ($sats < 0) {
             throw new InvalidArgumentException('Bitcoin amount cannot be negative.');
         }
+
         return $sats;
     }
 
@@ -32,13 +33,14 @@ final class BitcoinAmount
 
         $whole = intdiv($satoshis, self::SATOSHIS_PER_BTC);
         $fraction = $satoshis % self::SATOSHIS_PER_BTC;
+
         return sprintf('%d.%08d', $whole, $fraction);
     }
 
     public static function percentOf(int $satoshis, string $percent): int
     {
         $percent = trim($percent);
-        if ($satoshis < 0 || !preg_match('/^(?:0|\d+)(?:\.\d{1,4})?$/', $percent)) {
+        if ($satoshis < 0 || ! preg_match('/^(?:0|\d+)(?:\.\d{1,4})?$/', $percent)) {
             throw new InvalidArgumentException('Invalid fee calculation.');
         }
 

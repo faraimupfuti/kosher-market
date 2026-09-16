@@ -12,7 +12,7 @@ class PaymentManager
      *
      * @return mixed
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public static function make(string $gatewayCode, string $environment = 'sandbox')
     {

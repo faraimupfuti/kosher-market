@@ -10,13 +10,17 @@ use Illuminate\Validation\Rule;
 
 class UpdateProfileRequest extends FormRequest
 {
-    public function authorize(): bool { return Auth::guard('vendor')->check(); }
+    public function authorize(): bool
+    {
+        return Auth::guard('vendor')->check();
+    }
 
     public function rules(): array
     {
         $vendor = Auth::guard('vendor')->user();
+
         return [
-            'pseudonym' => ['required', 'string', 'max:30', Rule::unique('vendors', 'pseudonym')->ignore($vendor->id), new AllowedVendorPseudonym()],
+            'pseudonym' => ['required', 'string', 'max:30', Rule::unique('vendors', 'pseudonym')->ignore($vendor->id), new AllowedVendorPseudonym],
             'name' => ['required', 'string', 'max:255'],
             'email' => ['nullable', 'email', 'max:255', Rule::unique('vendors', 'email')->ignore($vendor->id)],
             'phone' => ['nullable', 'string', 'max:20'],
@@ -30,7 +34,7 @@ class UpdateProfileRequest extends FormRequest
     {
         $validator->after(function ($validator) {
             $vendor = Auth::guard('vendor')->user();
-            if (!Hash::check($this->current_password, $vendor->password)) {
+            if (! Hash::check($this->current_password, $vendor->password)) {
                 $validator->errors()->add('current_password', __('validation.incorrect_current_password'));
             }
         });

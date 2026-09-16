@@ -33,12 +33,14 @@ use App\Http\Controllers\Vendor\BitcoinPayoutVerificationController;
 use App\Http\Controllers\Vendor\OrderShippingController;
 use App\Http\Controllers\Vendor\ProductShippingController;
 use App\Http\Controllers\Vendor\ShippingController;
-use App\Http\Controllers\VendorRegistrationFeeController;
 use App\Http\Controllers\VendorProfileController;
+use App\Http\Controllers\VendorRegistrationFeeController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/login', function () { return view('admin.auth.login'); });
+Route::get('/login', function () {
+    return view('admin.auth.login');
+});
 Auth::routes();
 Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');

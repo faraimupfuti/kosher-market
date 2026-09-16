@@ -10,7 +10,18 @@ class VendorShippingZone extends Model
 
     protected $casts = ['enabled' => 'boolean'];
 
-    public function vendor() { return $this->belongsTo(Vendor::class); }
-    public function countries() { return $this->belongsToMany(Country::class, 'vendor_shipping_zone_countries', 'shipping_zone_id', 'country_id'); }
-    public function rates() { return $this->hasMany(VendorShippingRate::class, 'shipping_zone_id'); }
+    public function vendor()
+    {
+        return $this->belongsTo(Vendor::class);
+    }
+
+    public function countries()
+    {
+        return $this->belongsToMany(Country::class, 'vendor_shipping_zone_countries', 'shipping_zone_id', 'country_id');
+    }
+
+    public function rates()
+    {
+        return $this->hasMany(VendorShippingRate::class, 'shipping_zone_id');
+    }
 }

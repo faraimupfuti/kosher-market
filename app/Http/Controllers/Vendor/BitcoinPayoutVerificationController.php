@@ -12,6 +12,7 @@ class BitcoinPayoutVerificationController extends Controller
     public function show()
     {
         $vendor = Auth::guard('vendor')->user();
+
         return view('vendor.bitcoin.verify-payout', compact('vendor'));
     }
 
@@ -19,7 +20,7 @@ class BitcoinPayoutVerificationController extends Controller
     {
         $vendor = Auth::guard('vendor')->user();
 
-        if (!$vendor->bitcoin_payout_address) {
+        if (! $vendor->bitcoin_payout_address) {
             return back()->withErrors(['bitcoin_payout_address' => 'Add a Bitcoin payout address first.']);
         }
 

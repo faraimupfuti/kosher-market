@@ -12,6 +12,7 @@ class BitcoinPayoutController extends Controller
     public function edit()
     {
         $vendor = Auth::guard('vendor')->user();
+
         return view('vendor.bitcoin.payout', compact('vendor'));
     }
 

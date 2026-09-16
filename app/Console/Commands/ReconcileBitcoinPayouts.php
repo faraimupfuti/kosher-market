@@ -10,6 +10,7 @@ use Throwable;
 class ReconcileBitcoinPayouts extends Command
 {
     protected $signature = 'bitcoin:reconcile-payouts {--limit=25 : Maximum settlements to process}';
+
     protected $description = 'Retry and reconcile pending Bitcoin seller payouts and refunds with BTCPay Server.';
 
     public function handle(BitcoinEscrowService $escrow): int
@@ -24,8 +25,9 @@ class ReconcileBitcoinPayouts extends Command
 
         foreach ($settlements as $settlement) {
             try {
-                if ($settlement->type === 'buyer_refund' && !$settlement->destination_address) {
+                if ($settlement->type === 'buyer_refund' && ! $settlement->destination_address) {
                     $this->warn("#{$settlement->id}: refund destination is missing; skipped.");
+
                     continue;
                 }
                 $settlement = $escrow->syncSettlement($settlement);
@@ -39,6 +41,7 @@ class ReconcileBitcoinPayouts extends Command
                 $this->error("#{$settlement->id}: {$e->getMessage()}");
             }
         }
+
         return self::SUCCESS;
     }
 }

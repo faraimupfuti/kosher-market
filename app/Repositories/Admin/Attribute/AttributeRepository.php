@@ -59,7 +59,7 @@ class AttributeRepository implements AttributeRepositoryInterface
             if (! empty($data['translations'])) {
                 foreach ($data['translations'] as $languageCode => $translatedValues) {
                     if (! empty($translatedValues[$index])) {
-                        \App\Models\AttributeValueTranslation::create([
+                        AttributeValueTranslation::create([
                             'attribute_value_id' => $attributeValue->id,
                             'language_code' => $languageCode,
                             'translated_value' => $translatedValues[$index],

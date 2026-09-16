@@ -11,6 +11,7 @@ class OrderTrackingController extends Controller
     public function show(Request $request, Order $order)
     {
         $this->authorizeOrder($request, $order);
+
         return view('orders.tracking', ['order' => $order->load(['trackingEvents' => fn ($q) => $q->latest('occurred_at')])]);
     }
 
@@ -18,9 +19,10 @@ class OrderTrackingController extends Controller
     {
         $vendor = $request->user('vendor');
         abort_unless($vendor && (int) $order->vendor_id === (int) $vendor->id, 403);
-        $data = $request->validate(['status' => 'required|string|max:50','location' => 'nullable|string|max:255','note' => 'nullable|string|max:2000','occurred_at' => 'nullable|date']);
+        $data = $request->validate(['status' => 'required|string|max:50', 'location' => 'nullable|string|max:255', 'note' => 'nullable|string|max:2000', 'occurred_at' => 'nullable|date']);
         OrderTrackingEvent::create(array_merge($data, ['order_id' => $order->id, 'occurred_at' => $data['occurred_at'] ?? now()]));
         $order->update(['status' => $data['status']]);
+
         return back()->with('success', 'Tracking update added.');
     }
 

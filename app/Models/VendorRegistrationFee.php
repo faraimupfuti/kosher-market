@@ -10,9 +10,9 @@ class VendorRegistrationFee extends Model
     use HasFactory;
 
     protected $fillable = [
-        'vendor_id','currency','usd_amount','btc_amount','btc_satoshis','status',
-        'btcpay_invoice_id','checkout_url','bitcoin_txid','bitcoin_payment_address',
-        'bitcoin_confirmations','payment_detected_at','paid_at','error_message',
+        'vendor_id', 'currency', 'usd_amount', 'btc_amount', 'btc_satoshis', 'status',
+        'btcpay_invoice_id', 'checkout_url', 'bitcoin_txid', 'bitcoin_payment_address',
+        'bitcoin_confirmations', 'payment_detected_at', 'paid_at', 'error_message',
     ];
 
     protected $casts = [
@@ -22,5 +22,8 @@ class VendorRegistrationFee extends Model
         'paid_at' => 'datetime',
     ];
 
-    public function vendor() { return $this->belongsTo(Vendor::class); }
+    public function vendor()
+    {
+        return $this->belongsTo(Vendor::class);
+    }
 }

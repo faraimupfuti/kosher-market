@@ -9,7 +9,9 @@ use Illuminate\Support\Facades\DB;
 class VendorPerformanceService
 {
     private const COMPLETED_STATUSES = ['completed'];
+
     private const SALES_WINDOW_DAYS = 90;
+
     private const RATING_PRIOR_REVIEWS = 5;
 
     public function rankings(int $limit = 6): array
@@ -85,8 +87,7 @@ class VendorPerformanceService
 
     private function score(Collection $vendors): void
     {
-        $globalRating = $vendors->sum(fn ($vendor) =>
-            (float) ($vendor->approved_reviews_avg_rating ?? 0) * (int) $vendor->approved_reviews_count
+        $globalRating = $vendors->sum(fn ($vendor) => (float) ($vendor->approved_reviews_avg_rating ?? 0) * (int) $vendor->approved_reviews_count
         );
         $globalReviews = $vendors->sum('approved_reviews_count');
         $globalRating = $globalReviews > 0 ? $globalRating / $globalReviews : 0;

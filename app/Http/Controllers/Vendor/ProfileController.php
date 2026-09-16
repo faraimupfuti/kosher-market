@@ -12,6 +12,7 @@ class ProfileController extends Controller
     public function edit()
     {
         $vendor = auth()->guard('vendor')->user();
+
         return view('vendor.profile.edit', compact('vendor'));
     }
 
@@ -32,6 +33,7 @@ class ProfileController extends Controller
         }
 
         $vendor->update($data);
+
         return back()->with('success', __('cms.profile.profile_updated'));
     }
 }

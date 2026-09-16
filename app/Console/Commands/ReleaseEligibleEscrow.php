@@ -10,12 +10,14 @@ use Throwable;
 class ReleaseEligibleEscrow extends Command
 {
     protected $signature = 'escrow:release-eligible {--dry-run : Show eligible escrow without changing status}';
+
     protected $description = 'Release funded Bitcoin escrow transactions whose holding period has expired';
 
     public function handle(BitcoinEscrowService $service): int
     {
-        if (!config('escrow.auto_release', true) && !$this->option('dry-run')) {
+        if (! config('escrow.auto_release', true) && ! $this->option('dry-run')) {
             $this->warn('Automatic escrow release is disabled by ESCROW_AUTO_RELEASE.');
+
             return self::SUCCESS;
         }
 
@@ -29,6 +31,7 @@ class ReleaseEligibleEscrow extends Command
                 if ($this->option('dry-run')) {
                     $this->line("Eligible escrow #{$escrow->id}: {$escrow->seller_amount} BTC");
                     $count++;
+
                     continue;
                 }
 
@@ -43,6 +46,7 @@ class ReleaseEligibleEscrow extends Command
         });
 
         $this->info("Processed {$count} eligible escrow transaction(s).");
+
         return self::SUCCESS;
     }
 }

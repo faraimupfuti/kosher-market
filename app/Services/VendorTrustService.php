@@ -20,19 +20,30 @@ class VendorTrustService
         $historyScore = min(15, max(0, 15 - ($disputes * 3)));
         $refundScore = $orders > 0 ? max(0, 15 - (($refunds / $orders) * 15)) : 10;
         $verificationScore = $vendor->verification_status === 'verified' ? 20 : ($vendor->verification_status === 'established' ? 12 : 5);
+
         return max(0, min(100, (int) round($ratingScore + $volumeScore + $historyScore + $refundScore + $verificationScore)));
     }
+
     public function refresh(Vendor $vendor): int
     {
         $score = $this->score($vendor);
         $vendor->forceFill(['trust_score' => $score])->saveQuietly();
+
         return $score;
     }
+
     public function badge(Vendor $vendor): string
     {
-        if ($vendor->verification_status === 'verified' && $vendor->trust_score >= 85) return 'Verified Vendor';
-        if ($vendor->trust_score >= 75) return 'Established Vendor';
-        if ($vendor->trust_score >= 60) return 'Developing Vendor';
+        if ($vendor->verification_status === 'verified' && $vendor->trust_score >= 85) {
+            return 'Verified Vendor';
+        }
+        if ($vendor->trust_score >= 75) {
+            return 'Established Vendor';
+        }
+        if ($vendor->trust_score >= 60) {
+            return 'Developing Vendor';
+        }
+
         return 'New Vendor';
     }
 }

@@ -7,6 +7,7 @@ use App\Models\Brand;
 use App\Models\Language;
 use App\Services\Admin\BrandService;
 use Illuminate\Http\Request;
+use Illuminate\Support\MessageBag;
 
 class BrandController extends Controller
 {
@@ -54,7 +55,7 @@ class BrandController extends Controller
 
         $result = $this->brandService->store($request->all());
 
-        if ($result instanceof \Illuminate\Support\MessageBag) {
+        if ($result instanceof MessageBag) {
             return redirect()->back()->withErrors($result)->withInput();
         }
 
@@ -79,7 +80,7 @@ class BrandController extends Controller
 
         $result = $this->brandService->updateBrand($id, $request->all());
 
-        if ($result instanceof \Illuminate\Support\MessageBag) {
+        if ($result instanceof MessageBag) {
             return redirect()->back()->withErrors($result)->withInput();
         }
 

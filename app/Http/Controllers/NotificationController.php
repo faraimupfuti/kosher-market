@@ -11,6 +11,7 @@ class NotificationController extends Controller
         $user = $request->user('customer') ?: $request->user('vendor');
         abort_unless($user, 403);
         $notifications = $user->notifications()->latest()->paginate(20);
+
         return view('notifications.index', compact('notifications'));
     }
 
@@ -24,6 +25,7 @@ class NotificationController extends Controller
         if ($conversationId) {
             return redirect()->route($request->user('vendor') ? 'vendor.chat.show' : 'chat.show', $conversationId);
         }
+
         return back();
     }
 
@@ -32,6 +34,7 @@ class NotificationController extends Controller
         $user = $request->user('customer') ?: $request->user('vendor');
         abort_unless($user, 403);
         $user->unreadNotifications->markAsRead();
+
         return back();
     }
 }

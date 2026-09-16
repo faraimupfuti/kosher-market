@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
-use App\Models\EscrowTransaction;
 use App\Models\EscrowLedgerEntry;
+use App\Models\EscrowTransaction;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
@@ -15,14 +15,18 @@ class BitcoinPayoutService
      */
     public function queueSellerPayout(EscrowTransaction $escrow, string $destination): EscrowLedgerEntry
     {
-        if ($escrow->status !== 'released') throw new RuntimeException('Escrow must be released before payout.');
-        if (!preg_match('/^(bc1|[13])[a-zA-HJ-NP-Z0-9]{20,}$/', trim($destination))) {
+        if ($escrow->status !== 'released') {
+            throw new RuntimeException('Escrow must be released before payout.');
+        }
+        if (! preg_match('/^(bc1|[13])[a-zA-HJ-NP-Z0-9]{20,}$/', trim($destination))) {
             throw new RuntimeException('Invalid Bitcoin payout address.');
         }
 
         return DB::transaction(function () use ($escrow, $destination) {
             $existing = $escrow->ledgerEntries()->where('type', 'seller_payout_pending')->first();
-            if ($existing) return $existing;
+            if ($existing) {
+                return $existing;
+            }
 
             return EscrowLedgerEntry::create([
                 'escrow_transaction_id' => $escrow->id,

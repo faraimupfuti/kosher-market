@@ -41,7 +41,7 @@ class BitcoinPayoutAddressVerificationService
                 ->lockForUpdate()
                 ->first();
 
-            if (!$verification || $verification->expires_at->isPast()) {
+            if (! $verification || $verification->expires_at->isPast()) {
                 throw ValidationException::withMessages([
                     'token' => 'The payout-address verification code is invalid or expired.',
                 ]);

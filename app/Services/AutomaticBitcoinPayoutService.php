@@ -16,16 +16,16 @@ class AutomaticBitcoinPayoutService
      */
     public function forReleasedEscrow(EscrowTransaction $escrow): BitcoinSettlement
     {
-        if (!config('bitcoin.auto_payouts', true)) {
+        if (! config('bitcoin.auto_payouts', true)) {
             throw new RuntimeException('Automatic Bitcoin payouts are disabled.');
         }
 
         $vendor = $escrow->order?->vendor;
-        if (!$vendor) {
+        if (! $vendor) {
             throw new RuntimeException('Seller payout cannot proceed: vendor was not found.');
         }
 
-        if (!$vendor->bitcoin_payout_address || !$vendor->bitcoin_payout_address_verified_at) {
+        if (! $vendor->bitcoin_payout_address || ! $vendor->bitcoin_payout_address_verified_at) {
             throw new RuntimeException('Seller payout cannot proceed until the vendor has a verified Bitcoin payout address.');
         }
 
@@ -33,7 +33,9 @@ class AutomaticBitcoinPayoutService
             ->where('type', 'seller_payout')
             ->firstOrFail();
 
-        if ($settlement->status === 'completed') return $settlement;
+        if ($settlement->status === 'completed') {
+            return $settlement;
+        }
 
         // Never trust a stale destination stored on a settlement if the vendor has
         // subsequently changed their payout address. A changed address must be
@@ -43,7 +45,7 @@ class AutomaticBitcoinPayoutService
         }
 
         $settlement = $settlement->fresh();
-        if (!$settlement->btcpay_payout_id) {
+        if (! $settlement->btcpay_payout_id) {
             $settlement = $this->escrow->submitSettlement($settlement);
         }
 

@@ -15,8 +15,9 @@ class ShippingController extends Controller
     public function index()
     {
         $vendor = Auth::guard('vendor')->user();
-        $countries = Country::where('enabled', true)->orderBy('name')->get(['id','code','name']);
+        $countries = Country::where('enabled', true)->orderBy('name')->get(['id', 'code', 'name']);
         $zones = VendorShippingZone::with(['countries', 'rates'])->where('vendor_id', $vendor->id)->orderBy('name')->get();
+
         return view('vendor.shipping.index', compact('countries', 'zones'));
     }
 
@@ -24,14 +25,15 @@ class ShippingController extends Controller
     {
         $vendor = Auth::guard('vendor')->user();
         $data = $request->validate([
-            'name' => ['required','string','max:100'],
-            'countries' => ['required','array','min:1'],
-            'countries.*' => ['required','integer','exists:countries,id'],
+            'name' => ['required', 'string', 'max:100'],
+            'countries' => ['required', 'array', 'min:1'],
+            'countries.*' => ['required', 'integer', 'exists:countries,id'],
         ]);
         DB::transaction(function () use ($vendor, $data) {
             $zone = VendorShippingZone::create(['vendor_id' => $vendor->id, 'name' => $data['name'], 'enabled' => true]);
             $zone->countries()->sync(array_map('intval', $data['countries']));
         });
+
         return back()->with('success', 'Shipping zone created.');
     }
 
@@ -39,16 +41,17 @@ class ShippingController extends Controller
     {
         $vendor = Auth::guard('vendor')->user();
         $data = $request->validate([
-            'shipping_zone_id' => ['required','integer','exists:vendor_shipping_zones,id'],
-            'service_name' => ['required','string','max:100'],
-            'price_btc' => ['required','numeric','min:0','max:21000000'],
-            'free_shipping_threshold_btc' => ['nullable','numeric','min:0','max:21000000'],
-            'min_delivery_days' => ['required','integer','min:0','max:365'],
-            'max_delivery_days' => ['required','integer','gte:min_delivery_days','max:365'],
-            'tracking_url_template' => ['nullable','url','max:500'],
+            'shipping_zone_id' => ['required', 'integer', 'exists:vendor_shipping_zones,id'],
+            'service_name' => ['required', 'string', 'max:100'],
+            'price_btc' => ['required', 'numeric', 'min:0', 'max:21000000'],
+            'free_shipping_threshold_btc' => ['nullable', 'numeric', 'min:0', 'max:21000000'],
+            'min_delivery_days' => ['required', 'integer', 'min:0', 'max:365'],
+            'max_delivery_days' => ['required', 'integer', 'gte:min_delivery_days', 'max:365'],
+            'tracking_url_template' => ['nullable', 'url', 'max:500'],
         ]);
         $zone = VendorShippingZone::whereKey($data['shipping_zone_id'])->where('vendor_id', $vendor->id)->firstOrFail();
         VendorShippingRate::create($data + ['enabled' => true]);
+
         return back()->with('success', 'Shipping rate created.');
     }
 
@@ -56,6 +59,7 @@ class ShippingController extends Controller
     {
         abort_unless($zone->vendor_id === Auth::guard('vendor')->id(), 403);
         $zone->delete();
+
         return back()->with('success', 'Shipping zone deleted.');
     }
 
@@ -63,6 +67,7 @@ class ShippingController extends Controller
     {
         abort_unless($rate->zone()->where('vendor_id', Auth::guard('vendor')->id())->exists(), 403);
         $rate->delete();
+
         return back()->with('success', 'Shipping rate deleted.');
     }
 }

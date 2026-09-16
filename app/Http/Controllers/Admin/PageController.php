@@ -7,6 +7,7 @@ use App\Models\Language;
 use App\Models\Page;
 use App\Models\PageTranslation;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Yajra\DataTables\Facades\DataTables;
@@ -106,7 +107,7 @@ class PageController extends Controller
         foreach ($request->translations as $lang => $data) {
             $imagePath = null;
 
-            if (isset($data['image']) && $data['image'] instanceof \Illuminate\Http\UploadedFile) {
+            if (isset($data['image']) && $data['image'] instanceof UploadedFile) {
                 $imagePath = $data['image']->store('pages', 'public');
             }
 
@@ -155,7 +156,7 @@ class PageController extends Controller
 
             $imagePath = $translation->image_url;
 
-            if (isset($data['image']) && $data['image'] instanceof \Illuminate\Http\UploadedFile) {
+            if (isset($data['image']) && $data['image'] instanceof UploadedFile) {
                 if ($imagePath) {
                     Storage::disk('public')->delete($imagePath);
                 }

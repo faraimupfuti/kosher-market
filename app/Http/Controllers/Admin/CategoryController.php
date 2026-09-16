@@ -7,6 +7,7 @@ use App\Models\Category;
 use App\Models\Language;
 use App\Services\Admin\CategoryService;
 use Illuminate\Http\Request;
+use Illuminate\Support\MessageBag;
 
 class CategoryController extends Controller
 {
@@ -57,7 +58,7 @@ class CategoryController extends Controller
 
         $result = $this->categoryService->store($translations);
 
-        if ($result instanceof \Illuminate\Support\MessageBag) {
+        if ($result instanceof MessageBag) {
             return redirect()->back()->withErrors($result)->withInput();
         }
 

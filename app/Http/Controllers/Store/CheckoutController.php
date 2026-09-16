@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\PaymentGateway;
+use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Services\Store\OrderService;
 use Illuminate\Http\Request;
@@ -29,7 +30,7 @@ class CheckoutController extends Controller
         $subtotal = 0;
 
         foreach ($cart as $key => $item) {
-            $product = \App\Models\Product::with(['translations', 'thumbnail'])->find($item['product_id']);
+            $product = Product::with(['translations', 'thumbnail'])->find($item['product_id']);
 
             $variant = isset($item['variant_id'])
                 ? ProductVariant::with('images')->find($item['variant_id'])

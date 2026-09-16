@@ -27,6 +27,7 @@ class AuditAdminActions
                 'metadata' => ['status' => $response->getStatusCode()],
             ]);
         }
+
         return $response;
     }
 }

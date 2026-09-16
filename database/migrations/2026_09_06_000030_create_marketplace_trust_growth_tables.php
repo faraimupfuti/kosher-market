@@ -4,7 +4,8 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     public function up(): void
     {
         if (Schema::hasTable('vendors')) {
@@ -18,7 +19,9 @@ return new class extends Migration {
                     'refund_rate' => fn ($t) => $t->decimal('refund_rate', 5, 2)->default(0),
                     'fulfillment_rate' => fn ($t) => $t->decimal('fulfillment_rate', 5, 2)->default(0),
                 ] as $name => $definition) {
-                    if (! Schema::hasColumn('vendors', $name)) $definition($table);
+                    if (! Schema::hasColumn('vendors', $name)) {
+                        $definition($table);
+                    }
                 }
             });
         }
@@ -128,7 +131,9 @@ return new class extends Migration {
         if (Schema::hasTable('vendors')) {
             Schema::table('vendors', function (Blueprint $table) {
                 foreach (['verification_status', 'trust_score', 'verified_at', 'response_rate', 'dispute_rate', 'refund_rate', 'fulfillment_rate'] as $column) {
-                    if (Schema::hasColumn('vendors', $column)) $table->dropColumn($column);
+                    if (Schema::hasColumn('vendors', $column)) {
+                        $table->dropColumn($column);
+                    }
                 }
             });
         }

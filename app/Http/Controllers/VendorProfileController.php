@@ -21,6 +21,7 @@ class VendorProfileController extends Controller
         $rating = round((float) ($reviews->avg('rating') ?: 0), 2);
         $reviewCount = $reviews->count();
         $products = Product::where('vendor_id', $vendor->id)->where('status', 1)->latest()->paginate(24);
+
         return view('vendors.public-profile', compact('vendor', 'completedOrders', 'rating', 'reviewCount', 'products', 'trustScore', 'trustBadge'));
     }
 }

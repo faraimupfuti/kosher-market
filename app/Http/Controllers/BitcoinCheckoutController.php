@@ -29,6 +29,7 @@ class BitcoinCheckoutController extends Controller
         abort_if((float) $price <= 0, 422, 'Product does not have a valid BTC price.');
         $countries = Country::where('enabled', true)->orderBy('name')->get(['code', 'name']);
         $product->setAttribute('checkout_price', (float) $price);
+
         return view('checkout.bitcoin', compact('product', 'countries'));
     }
 
@@ -41,6 +42,7 @@ class BitcoinCheckoutController extends Controller
         ]);
         $product = $this->activeProductQuery()->with('primaryVariant')->findOrFail($data['product_id']);
         $price = (float) ($product->primaryVariant?->discount_price ?: $product->primaryVariant?->price ?: $product->price);
+
         return response()->json([
             'currency' => 'BTC',
             'options' => $this->shipping->options($product, $data['country'], round($price * (int) $data['quantity'], 8)),
@@ -75,7 +77,7 @@ class BitcoinCheckoutController extends Controller
             $subtotal = round($price * $quantity, 8);
             $options = $this->shipping->options($product, $data['shipping_country'], $subtotal);
             $rate = collect($options)->firstWhere('id', (int) $data['shipping_rate_id']);
-            abort_if(!$rate, 422, 'The selected shipping method is not available for this destination.');
+            abort_if(! $rate, 422, 'The selected shipping method is not available for this destination.');
 
             $shippingCost = round((float) $rate['price_btc'], 8);
             $total = round($subtotal + $shippingCost, 8);
@@ -114,6 +116,7 @@ class BitcoinCheckoutController extends Controller
             ]);
             $escrow = $this->escrow->createForOrder($order);
             $invoice = $this->escrow->createBitcoinInvoice($escrow);
+
             return compact('order', 'escrow', 'invoice');
         });
 

@@ -37,22 +37,48 @@ class EscrowTransaction extends Model
 
     public function canTransitionTo(string $next): bool
     {
-        if ($this->status === $next) return true;
+        if ($this->status === $next) {
+            return true;
+        }
+
         return in_array($next, self::TRANSITIONS[$this->status] ?? [], true);
     }
 
     public function transitionTo(string $next): void
     {
-        if (!$this->canTransitionTo($next)) {
+        if (! $this->canTransitionTo($next)) {
             throw new RuntimeException("Invalid escrow state transition: {$this->status} -> {$next}.");
         }
         $this->status = $next;
     }
 
-    public function order() { return $this->belongsTo(Order::class); }
-    public function payment() { return $this->belongsTo(Payment::class); }
-    public function buyer() { return $this->belongsTo(Customer::class, 'buyer_id'); }
-    public function vendor() { return $this->belongsTo(Vendor::class, 'vendor_id'); }
-    public function ledgerEntries() { return $this->hasMany(EscrowLedgerEntry::class); }
-    public function disputes() { return $this->hasMany(EscrowDispute::class); }
+    public function order()
+    {
+        return $this->belongsTo(Order::class);
+    }
+
+    public function payment()
+    {
+        return $this->belongsTo(Payment::class);
+    }
+
+    public function buyer()
+    {
+        return $this->belongsTo(Customer::class, 'buyer_id');
+    }
+
+    public function vendor()
+    {
+        return $this->belongsTo(Vendor::class, 'vendor_id');
+    }
+
+    public function ledgerEntries()
+    {
+        return $this->hasMany(EscrowLedgerEntry::class);
+    }
+
+    public function disputes()
+    {
+        return $this->hasMany(EscrowDispute::class);
+    }
 }
