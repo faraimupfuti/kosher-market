@@ -41,7 +41,7 @@ jobs:
           git push
 
   build:
-    if: github.event_name == 'pull_request' || needs.normalize.result == 'success' && github.event.head_commit.message != 'Normalize Composer lockfile and PHP formatting'
+    if: ${{ always() && (github.event_name == 'pull_request' || (needs.normalize.result == 'success' && github.event.head_commit.message != 'Normalize Composer lockfile and PHP formatting')) }}
     needs: normalize
     runs-on: ubuntu-latest
     steps:
@@ -59,7 +59,7 @@ jobs:
       - run: npm run build
 
   lint:
-    if: github.event_name == 'pull_request' || needs.normalize.result == 'success' && github.event.head_commit.message != 'Normalize Composer lockfile and PHP formatting'
+    if: ${{ always() && (github.event_name == 'pull_request' || (needs.normalize.result == 'success' && github.event.head_commit.message != 'Normalize Composer lockfile and PHP formatting')) }}
     needs: normalize
     runs-on: ubuntu-latest
     steps:
@@ -73,7 +73,7 @@ jobs:
       - run: vendor/bin/pint --test
 
   test:
-    if: github.event_name == 'pull_request' || needs.normalize.result == 'success' && github.event.head_commit.message != 'Normalize Composer lockfile and PHP formatting'
+    if: ${{ always() && (github.event_name == 'pull_request' || (needs.normalize.result == 'success' && github.event.head_commit.message != 'Normalize Composer lockfile and PHP formatting')) }}
     needs: normalize
     runs-on: ubuntu-latest
     services:
