@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   packages: write
   security-events: write
 
@@ -15,6 +15,44 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set up PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: bcmath, exif, gd, intl, mbstring, pcntl, pdo_mysql, xml, zip
+          coverage: none
+          tools: composer:2
+
+      - name: Validate Composer configuration
+        run: composer validate --strict
+
+      - name: Resolve Laravel 13 dependencies
+        run: composer update --with-all-dependencies --no-interaction --prefer-dist --no-progress
+
+      - name: Run application tests
+        env:
+          APP_ENV: testing
+          APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ':memory:'
+          CACHE_STORE: array
+          SESSION_DRIVER: array
+          QUEUE_CONNECTION: sync
+        run: php artisan test --colors=never
+
+      - name: Commit regenerated Composer lockfile
+        run: |
+          if git diff --quiet -- composer.lock; then
+            echo "composer.lock is already current."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add composer.lock
+          git commit -m "Lock Laravel 13 dependency graph"
+          git push
 
       - uses: docker/login-action@v3
         with:
