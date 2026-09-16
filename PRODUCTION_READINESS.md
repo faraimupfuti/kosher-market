@@ -3,34 +3,36 @@
 ## Implemented in the repository
 
 - Docker-only production deployment path; no Kubernetes dependency.
-- Dedicated PHP-FPM production image with OPcache.
-- Nginx reverse-proxy/container boundary.
+- Dedicated PHP-FPM production image with PHP 8.3 and OPcache.
+- Node 22 production asset build.
+- Nginx reverse-proxy/container boundary with baseline security headers.
 - MySQL and Redis isolated on an internal Docker network.
 - Database and Redis are not published to host ports in production Compose.
 - Production environment template with `APP_DEBUG=false`.
 - Production logging defaults to stderr at warning level.
 - Automatic escrow release defaults to disabled.
+- Automatic Bitcoin payouts are explicitly configurable and require a verified vendor payout address.
 - MySQL backup and restore helpers.
 - Explicit migration step in the production deployment runbook.
 - Laravel config/route/view cache instructions.
 - Production container CI build.
-- HIGH/CRITICAL container vulnerability scan with Trivy.
-- Existing BTCPay webhook HMAC validation.
-- Existing webhook fingerprint/idempotency handling.
-- Existing BTCPay invoice re-verification and escrow binding checks.
-- Existing exact BTC amount and confirmation checks.
-- Existing locked escrow transitions and settlement records.
-- Existing vendor payout-address verification.
+- HIGH/CRITICAL container vulnerability scanning with Trivy.
+- Composer dependency validation and security auditing in CI.
+- Laravel 13 dependency graph and lockfile.
+- BTCPay webhook HMAC validation.
+- Webhook fingerprint/idempotency handling.
+- BTCPay invoice re-verification and escrow binding checks.
+- Exact BTC amount and confirmation checks.
+- Locked escrow transitions and settlement records.
+- Vendor payout-address verification.
+- Automated unit coverage for satoshi arithmetic and BTC validation.
+- Feature coverage for webhook signature rejection and duplicate-event idempotency.
 
 ## Still required before real-money launch
 
-### Framework upgrade
-
-The application currently targets Laravel 10. Laravel 13 is the current major release and requires PHP 8.3; Laravel 13 receives security fixes through March 17, 2028. Upgrade the Composer dependency graph and lockfile, then run the full test suite before production. Do not simply edit `composer.json` and deploy: the lockfile must be regenerated and the application must pass CI.
-
 ### Financial integration testing
 
-Run a dedicated BTCPay testnet/sandbox cycle covering:
+The repository contains deterministic application tests, but real-money operation still requires a controlled BTCPay testnet/sandbox rehearsal covering:
 
 1. invoice creation
 2. payment detection
@@ -56,7 +58,7 @@ Perform an application-level security review covering authorization/IDOR, file u
 
 ### Infrastructure controls
 
-Before launch, add/verify:
+Before launch, verify:
 
 - TLS termination and HTTP-to-HTTPS redirect
 - firewall/security groups
@@ -73,4 +75,4 @@ Before launch, add/verify:
 
 ## Launch rule
 
-Do not enable real-money transactions solely because the Docker containers are healthy. Production readiness requires successful application tests, a successful payment integration test, a successful restore drill and an operational procedure for disputes, refunds and failed payouts.
+Do not enable real-money transactions solely because the Docker containers are healthy. Production readiness requires passing CI, a successful controlled BTCPay integration rehearsal, a successful restore drill and an operational procedure for disputes, refunds, webhook failures and payout failures.
