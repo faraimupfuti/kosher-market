@@ -2,6 +2,7 @@
 
 namespace App\Http;
 
+use App\Http\Middleware\AdminOnly;
 use App\Http\Middleware\AuditAdminActions;
 use App\Http\Middleware\Authenticate;
 use App\Http\Middleware\AuthenticateCustomer;
@@ -80,5 +81,6 @@ class Kernel extends HttpKernel
         'auth.customer' => AuthenticateCustomer::class,
         'vendor.can_sell' => EnsureVendorCanSell::class,
         'audit.admin' => AuditAdminActions::class,
+        'admin' => AdminOnly::class,
     ];
 }
