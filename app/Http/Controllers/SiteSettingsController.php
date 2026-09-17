@@ -7,6 +7,11 @@ use Illuminate\Http\Request;
 
 class SiteSettingsController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware(['auth', 'admin']);
+    }
+
     public function index()
     {
         return view('admin.site-settings.index');
@@ -33,7 +38,7 @@ class SiteSettingsController extends Controller
             'footer_text' => 'nullable|string',
         ]);
 
-        $settings = SiteSetting::first();
+        $settings = SiteSetting::firstOrFail();
 
         $settings->update([
             'site_name' => $request->site_name,
