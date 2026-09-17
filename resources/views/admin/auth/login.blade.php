@@ -13,7 +13,7 @@ html, body {
 
 .container-wrapper {
     width: 100%;
-    max-width: 450px; /* Balanced width */
+    max-width: 450px;
     padding: 20px;
 }
 
@@ -24,7 +24,6 @@ html, body {
     border-radius: 10px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
-
 </style>
 @endsection
 
@@ -36,26 +35,30 @@ html, body {
         </div>
         <h2 class="text-center mb-4">{{ cms_translate('auth.login') }}</h2>
 
+        @if(session('status'))
+            <div class="alert alert-success" role="alert">{{ session('status') }}</div>
+        @endif
+
         @error('password')
-            <div id="errorBar" class="alert alert-danger" role="alert">{{ $message }}</div>
+            <div class="alert alert-danger" role="alert">{{ $message }}</div>
         @enderror
         @error('email')
-            <div id="errorBar" class="alert alert-danger" role="alert">{{ $message }}</div>
+            <div class="alert alert-danger" role="alert">{{ $message }}</div>
         @enderror
 
-        <form method="POST" action="{{ route('login') }}" autocomplete="off">
+        <form method="POST" action="{{ route('login') }}" autocomplete="on">
             @csrf
             <div class="mb-3">
                 <label for="email" class="form-label">{{ cms_translate('auth.email') }}</label>
-                <input type="email" class="form-control @error('email') is-invalid @enderror" name="email" value="{{ old('email') }}" id="email" placeholder="{{ cms_translate('auth.email') }}" required>
+                <input type="email" class="form-control @error('email') is-invalid @enderror" name="email" value="{{ old('email') }}" id="email" autocomplete="username" required autofocus>
             </div>
             <div class="mb-3">
                 <label for="password" class="form-label">{{ cms_translate('auth.password') }}</label>
-                <input type="password" class="form-control @error('password') is-invalid @enderror" name="password" id="password" placeholder="{{ cms_translate('auth.password') }}" required>
+                <input type="password" class="form-control @error('password') is-invalid @enderror" name="password" id="password" autocomplete="current-password" required>
             </div>
             <div class="mb-3 form-check">
-                <input type="checkbox" class="form-check-input" id="rememberMe">
-                <label class="form-check-label" for="rememberMe">{{ cms_translate('auth.remember_me') }}</label>
+                <input type="checkbox" class="form-check-input" id="remember" name="remember" value="1">
+                <label class="form-check-label" for="remember">{{ cms_translate('auth.remember_me') }}</label>
             </div>
             <div class="d-grid">
                 <button type="submit" class="btn btn-primary">{{ cms_translate('auth.login') }}</button>
@@ -64,4 +67,3 @@ html, body {
     </div>
 </div>
 @endsection
-
