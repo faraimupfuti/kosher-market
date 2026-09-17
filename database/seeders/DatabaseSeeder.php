@@ -6,18 +6,13 @@ use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
 {
-    /**
-     * Seed the application's database.
-     */
     public function run(): void
     {
+        // Only safe, deterministic configuration is seeded by default.
+        // Demo orders, payments and refunds are intentionally excluded.
         $this->call([
             AdminSeeder::class,
-            OrderSeeder::class,
             LanguageSeeder::class,
-            PaymentGatewaySeeder::class,
-            PaymentSeeder::class,
-            RefundSeeder::class,
         ]);
     }
 }
