@@ -42,7 +42,7 @@ Route::get('/login', function () {
     return view('admin.auth.login');
 });
 Auth::routes();
-Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
+Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
     Route::resource('categories', CategoryController::class);
     Route::post('/categories/data', [CategoryController::class, 'getCategories'])->name('categories.data');
