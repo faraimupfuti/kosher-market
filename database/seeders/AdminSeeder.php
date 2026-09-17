@@ -9,11 +9,6 @@ use Illuminate\Support\Str;
 
 class AdminSeeder extends Seeder
 {
-    /**
-     * Bootstrap the initial marketplace administrator from environment variables.
-     *
-     * ADMIN_EMAIL and ADMIN_PASSWORD are intentionally not committed to source control.
-     */
     public function run(): void
     {
         $email = Str::lower(trim((string) env('ADMIN_EMAIL')));
@@ -21,7 +16,6 @@ class AdminSeeder extends Seeder
 
         if ($email === '' || $password === '') {
             $this->command?->warn('AdminSeeder skipped: ADMIN_EMAIL and ADMIN_PASSWORD must be set.');
-
             return;
         }
 
@@ -36,16 +30,7 @@ class AdminSeeder extends Seeder
         $admin = User::query()->firstOrNew(['email' => $email]);
         $admin->name = $admin->name ?: 'Kosher Market Administrator';
         $admin->password = Hash::make($password);
-
-        // Support the common role column used by the application's admin middleware.
-        if ($admin->getConnection()->getSchemaBuilder()->hasColumn($admin->getTable(), 'role')) {
-            $admin->role = 'admin';
-        }
-
-        if ($admin->getConnection()->getSchemaBuilder()->hasColumn($admin->getTable(), 'is_admin')) {
-            $admin->is_admin = true;
-        }
-
+        $admin->is_admin = true;
         $admin->email_verified_at = $admin->email_verified_at ?: now();
         $admin->save();
 
