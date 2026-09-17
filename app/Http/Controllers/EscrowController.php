@@ -89,7 +89,9 @@ class EscrowController extends Controller
             $locked = EscrowTransaction::whereKey($escrow->id)->lockForUpdate()->firstOrFail();
             if (! in_array($locked->status, ['funded', 'processing'], true)) {
                 abort(422, 'This escrow cannot be disputed.');
-            }$dispute = EscrowDispute::create(['escrow_transaction_id' => $locked->id, 'opened_by' => $customer->id, 'reason' => $data['reason'], 'description' => $data['description'], 'status' => 'open']);
+            }
+
+            $dispute = EscrowDispute::create(['escrow_transaction_id' => $locked->id, 'opened_by' => $customer->id, 'reason' => $data['reason'], 'description' => $data['description'], 'status' => 'open']);
             $locked->transitionTo('disputed');
             $locked->save();
 
@@ -155,7 +157,7 @@ class EscrowController extends Controller
                 return response()->json(['received' => true]);
             }
 
-            [$baseUrl,$storeId,$apiKey] = [rtrim((string) config('bitcoin.btcpay_url'), '/'), config('bitcoin.btcpay_store_id'), config('bitcoin.btcpay_api_key')];
+            [$baseUrl, $storeId, $apiKey] = [rtrim((string) config('bitcoin.btcpay_url'), '/'), config('bitcoin.btcpay_store_id'), config('bitcoin.btcpay_api_key')];
             if (! $baseUrl || ! $storeId || ! $apiKey) {
                 throw new \RuntimeException('Bitcoin gateway not configured.');
             }
@@ -226,10 +228,10 @@ class EscrowController extends Controller
 
             return response()->json(['received' => true]);
         } catch (Throwable $e) {
-            $event->update(['processing_error' => substr($e->getMessage(),0,5000)]);
+            $event->update(['processing_error' => substr($e->getMessage(), 0, 5000)]);
             report($e);
 
-            return response()->json(['message' => 'Webhook processing failed; BTCPay may retry delivery.'],502);
+            return response()->json(['message' => 'Webhook processing failed; BTCPay may retry delivery.'], 502);
         }
     }
 }
