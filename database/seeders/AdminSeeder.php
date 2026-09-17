@@ -16,6 +16,7 @@ class AdminSeeder extends Seeder
 
         if ($email === '' || $password === '') {
             $this->command?->warn('AdminSeeder skipped: ADMIN_EMAIL and ADMIN_PASSWORD must be set.');
+
             return;
         }
 
