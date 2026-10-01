@@ -51,7 +51,7 @@ Duplicate callbacks are idempotent. Escrow state transitions are locked inside d
 
 ## Vendor wallet
 
-Every vendor has an internal XMR wallet ledger.
+Every vendor has an internal XMR wallet ledger. For direct vendor deposits, the configured SHKeeper wallet must have unused XMR receiving addresses available; Kosher Market assigns an unused SHKeeper address to the vendor and then manually reconciles transactions received on it. The application does not generate or store Monero private keys.
 
 It tracks:
 
