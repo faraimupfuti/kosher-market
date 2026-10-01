@@ -21,7 +21,7 @@ class VendorRegistrationFeeController extends Controller
         } catch (Throwable $e) {
             report($e);
 
-            return view('vendor.registration-fee', ['vendor' => $vendor, 'fee' => null, 'error' => 'Bitcoin payment is temporarily unavailable.']);
+            return view('vendor.registration-fee', ['vendor' => $vendor, 'fee' => null, 'error' => 'Monero payment is temporarily unavailable.']);
         }
     }
 }

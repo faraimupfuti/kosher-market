@@ -1,178 +1,270 @@
 # Kosher Market
 
-**Bitcoin-only multi-vendor marketplace with escrow-protected transactions.**
+**Monero-first multi-vendor marketplace with manually controlled escrow and vendor wallets.**
 
-Kosher Market is a Laravel marketplace for buyers, vendors and administrators. The repository is **Docker-first**, uses **SHKeeper** as its cryptocurrency payment gateway, and is intentionally **manually operated**.
+Kosher Market is a Laravel marketplace for buyers, vendors and administrators. It is Docker-first, uses SHKeeper as the cryptocurrency gateway, and keeps all financially consequential marketplace actions under explicit human control.
 
-## Payment gateway
+## Currency and payment gateway
 
-SHKeeper is used for Bitcoin invoice creation, payment-address generation, payment callbacks, wallet-address allocation and manually initiated payouts. SHKeeper's API provides generated addresses and address transaction lookup in addition to invoice and payout APIs.
+**Primary marketplace currency: XMR (Monero).**
 
-Configure the SHKeeper wallet for BTC and set the webhook callback URL to:
+SHKeeper is used for:
+- XMR invoice creation
+- XMR payment-address generation
+- payment callbacks
+- XMR transaction lookup
+- manually initiated XMR payouts
+
+SHKeeper documents XMR support, invoice-based payment addresses, HMAC-SHA256 webhook signing, and the XMR single-payout API.
+
+Configure the callback URL as:
 
 ```text
-https://YOUR-MARKET-DOMAIN/bitcoin/shkeeper/webhook
+https://YOUR-MARKET-DOMAIN/monero/shkeeper/webhook
 ```
 
-SHKeeper webhook requests are verified before a payment is recorded.
+Never expose SHKeeper credentials, wallet seed material or private keys in source control.
 
-## Vendor wallets
+## Escrow
 
-Version 3 introduces an internal BTC wallet for every vendor.
+The payment lifecycle is:
 
-Each vendor wallet has:
+```text
+Buyer
+  ↓
+SHKeeper XMR invoice
+  ↓
+Unique XMR payment address
+  ↓
+SHKeeper payment callback
+  ↓
+Webhook signature + timestamp validation
+  ↓
+Escrow funded after configured confirmations
+  ↓
+Administrator manually releases or refunds
+```
 
-- available BTC balance
-- BTC locked in pending withdrawals
-- a SHKeeper-backed BTC deposit address
-- an immutable wallet transaction ledger
-- escrow-credit transactions
-- deposit transactions
-- withdrawal holds, completions and reversals
+SHKeeper's callback is verified against the raw HTTP body using HMAC-SHA256 and the API key, with timestamp replay protection.
 
-When an administrator releases a buyer escrow, the vendor's net proceeds are **credited to the vendor's Kosher Market wallet**. The marketplace does not immediately send those funds to an external address.
+Duplicate callbacks are idempotent. Escrow state transitions are locked inside database transactions so two concurrent administrators cannot release the same escrow twice.
 
-Vendors can then:
+## Vendor wallet
 
-1. Open **Vendor → Bitcoin Wallet**.
-2. Generate their BTC deposit address if they want to deposit BTC directly.
-3. Manually synchronize confirmed deposits from SHKeeper.
-4. Configure and verify a Bitcoin withdrawal address.
-5. Request a withdrawal from their available wallet balance.
-6. Wait for administrator review and manual SHKeeper payout submission.
+Every vendor has an internal XMR wallet ledger. For direct vendor deposits, the configured SHKeeper wallet must have unused XMR receiving addresses available; Kosher Market assigns an unused SHKeeper address to the vendor and then manually reconciles transactions received on it. The application does not generate or store Monero private keys.
 
-Wallet deposits are intentionally synchronized manually rather than by a scheduler, consistent with the project's manual-operation requirement.
+It tracks:
 
-## Operating model
+- available XMR
+- XMR locked in pending withdrawals
+- SHKeeper-backed XMR deposit address
+- deposits
+- escrow credits
+- withdrawal reservations
+- completed withdrawals
+- reversed withdrawals
 
-The marketplace does not run settlement, escrow-release or wallet-reconciliation schedules automatically.
+When an administrator releases an escrow, the vendor's net XMR proceeds are credited to the internal wallet. They are **not automatically paid to an external address**.
 
-- No Laravel scheduler service is started by Docker Compose.
-- No background queue worker is started by Docker Compose.
-- `QUEUE_CONNECTION=sync`.
-- `ESCROW_AUTO_RELEASE=false`.
-- `BITCOIN_AUTO_PAYOUTS=false`.
-- Containers use `restart: "no"`.
-- Escrow release and cryptocurrency payouts require explicit administrator action.
-- Vendor wallet deposit synchronization requires an explicit vendor action.
-- Database migrations are run manually.
+Vendor withdrawal flow:
 
-## Docker setup
+```text
+Vendor requests withdrawal
+        ↓
+Wallet balance is locked
+        ↓
+Administrator reviews
+        ↓
+Administrator submits SHKeeper XMR payout
+        ↓
+Administrator synchronizes payout status
+        ↓
+Wallet withdrawal completes or is reversed
+```
 
-### 1. Create the environment file
+No automatic payout worker exists.
+
+## XMR accounting
+
+Monero uses 12 decimal places. Financial calculations use integer atomic units with BCMath rather than floating-point arithmetic.
+
+The wallet invariant is:
+
+```text
+available atomic units + locked atomic units
+= vendor wallet ledger balance
+```
+
+Wallet mutations and escrow credits occur inside database transactions with row locking.
+
+## Overpayments and partial payments
+
+SHKeeper can report PARTIAL, PAID and OVERPAID invoice states. Kosher Market does not treat a partial payment as funded. An overpaid invoice is accepted only after the full escrow amount is covered; the excess must be handled according to the marketplace's refund/credit policy before real-money operation.
+
+## Production safety
+
+The production environment must use:
+
+```env
+APP_ENV=production
+APP_DEBUG=false
+```
+
+Laravel recommends production configuration/event/route/view caching and explicitly warns against enabling debug mode in production.
+
+After the production environment is configured, run:
 
 ```bash
-cp .env.docker.example .env
+docker compose exec app php artisan optimize
 ```
 
-Generate the Laravel application key inside Docker:
+Do **not** run `php artisan optimize` until the production environment variables are loaded, because Laravel's cached configuration must contain the intended production values.
+
+Health endpoint:
+
+```text
+GET /up
+```
+
+The endpoint checks application boot and database connectivity and returns HTTP 503 when the database is unavailable.
+
+## Docker
+
+Production uses PHP-FPM behind NGINX. MySQL uses the 8.4 LTS image. If upgrading an existing MySQL 8.0 data volume, take a verified logical backup and perform a tested MySQL upgrade procedure rather than attaching the old volume blindly. PHP-FPM is kept on the private Docker network; the application is exposed through NGINX on localhost port 8000. Put a TLS-terminating reverse proxy/load balancer in front of that listener and forward the original host/protocol headers.
+
+Create the environment file:
+
+```bash
+cp .env.production.example .env
+```
+
+Generate an application key:
 
 ```bash
 docker compose run --rm app php artisan key:generate
 ```
 
-Configure these SHKeeper variables in `.env`:
-
-```env
-SHKEEPER_URL=https://your-shkeeper-domain
-SHKEEPER_API_KEY=your_wallet_api_key
-SHKEEPER_USERNAME=your_shkeeper_username
-SHKEEPER_PASSWORD=your_shkeeper_password
-SHKEEPER_FIAT=USD
-SHKEEPER_CALLBACK_URL=https://your-market-domain/bitcoin/shkeeper/webhook
-SHKEEPER_WEBHOOK_TOLERANCE_SECONDS=300
-SHKEEPER_BTC_PAYOUT_FEE=5
-```
-
-Never commit wallet credentials, API keys, passwords, private keys or webhook secrets.
-
-### 2. Build
+Build:
 
 ```bash
 docker compose build
 ```
 
-### 3. Start manually
+Start manually:
 
 ```bash
 docker compose up -d
 ```
 
-The application is available at:
-
-```text
-http://localhost:8000
-```
-
-### 4. Run migrations manually
+Run migrations manually:
 
 ```bash
-docker compose exec app php artisan migrate
+docker compose exec app php artisan migrate --force
 ```
 
-### 5. Logs
+Optimize:
 
 ```bash
-docker compose logs -f app
+docker compose exec app php artisan optimize
 ```
 
-### 6. Stop manually
+Stop:
 
 ```bash
 docker compose down
 ```
 
-## Wallet and escrow flow
+The Docker runtime does not start Laravel schedulers or queue workers and does not automatically release escrow or submit cryptocurrency payouts.
 
-```text
-Buyer
-  │
-  │ BTC payment
-  ▼
-SHKeeper invoice
-  │
-  ▼
-Kosher Market escrow
-  │
-  │ Administrator releases order
-  ▼
-Vendor Kosher Market Wallet
-  │
-  │ Vendor requests withdrawal
-  ▼
-Admin reviews withdrawal
-  │
-  │ Admin submits payout
-  ▼
-SHKeeper
-  │
-  ▼
-Vendor's verified external BTC address
-```
+## Backups and recovery
 
-Kosher Market does **not** store Bitcoin private keys or seed phrases. The vendor wallet in the application is an internal ledger backed by the configured SHKeeper wallet infrastructure. The application never asks a vendor for a seed phrase or private key.
-
-## Manual Bitcoin operations
-
-SHKeeper handles blockchain payment detection and provides payment callbacks. Kosher Market records payment only after validation and idempotency checks.
-
-Escrow release is a marketplace decision. In v3, releasing escrow credits the vendor's internal wallet; it does **not** create an immediate external payout.
-
-Vendor withdrawals create a pending settlement and reserve the requested amount in the vendor wallet. An administrator explicitly submits the withdrawal to SHKeeper. SHKeeper's payout API is asynchronous, so the administrator can subsequently synchronize the payout status.
-
-## Development checks
+Manual backup:
 
 ```bash
-docker compose exec app php artisan test
+bash ops/backup.sh ./backups/$(date -u +%Y%m%dT%H%M%SZ)
 ```
 
-Rebuild after dependency or frontend changes:
+Manual restore:
 
 ```bash
-docker compose build --no-cache
-docker compose up -d
+bash ops/restore.sh ./backups/20261001T120000Z
 ```
 
-## Production safety
+The restore script requires an explicit `RESTORE` confirmation and should only be used during a controlled recovery window.
 
-Before accepting real Bitcoin, independently test invoice creation, webhook signature verification, replay protection, idempotency, partial/overpayment handling, confirmation policy, escrow transitions, wallet deposit reconciliation, wallet accounting, withdrawal reservation/reversal, payout failures, refunds, disputes, backups and recovery procedures.
+A production operator must back up:
+- MySQL
+- Laravel storage that contains business-critical files
+- SHKeeper wallet data according to SHKeeper's own backup/recovery procedure
+
+Backups must be encrypted and restoration must be tested periodically. A backup that has never been restored is not a verified recovery mechanism.
+
+## Monitoring
+
+Monitor:
+
+- `GET /up`
+- MySQL availability
+- application error logs
+- SHKeeper connectivity
+- failed webhook processing
+- escrow state anomalies
+- wallet ledger/reconciliation differences
+- pending withdrawals
+- failed SHKeeper payouts
+- administrator financial actions
+
+## Manual wallet reconciliation
+
+Before approving a vendor withdrawal, an administrator can reconcile the vendor wallet against its ledger:
+
+```bash
+docker compose exec app php artisan wallet:reconcile-xmr --vendor=VENDOR_ID
+```
+
+A non-zero exit code indicates a balance/ledger mismatch and should block further financial action until the discrepancy is investigated.
+
+## Manual financial operations
+
+Kosher Market intentionally does not automate these actions:
+
+- escrow release
+- escrow refund
+- wallet reconciliation
+- vendor withdrawal approval
+- SHKeeper payout submission
+- payout reconciliation
+
+This is a deliberate operational control.
+
+## Required pre-launch tests
+
+Before accepting real XMR, test the complete SHKeeper demo/testnet flow:
+
+1. Create an XMR invoice.
+2. Verify the returned XMR amount and address.
+3. Make a test payment.
+4. Verify the signed callback.
+5. Replay the callback and confirm no duplicate credit.
+6. Test a partial payment.
+7. Test an overpayment.
+8. Verify confirmation handling.
+9. Fund escrow.
+10. Release escrow once.
+11. Confirm the vendor wallet credit.
+12. Request a vendor withdrawal.
+13. Confirm wallet reservation.
+14. Submit the XMR payout manually.
+15. Synchronize the payout status.
+16. Test failed payout reversal.
+17. Test a refund.
+18. Test a dispute.
+19. Verify database backup and restore.
+
+SHKeeper provides a demo environment operating on testnet, which is appropriate for integration testing before real funds are introduced.
+
+## Important
+
+This repository should be considered **pre-production until the complete XMR/SHKeeper integration has been executed against a real SHKeeper test environment and the financial reconciliation tests have passed**.
+
+The code contains production hardening, but software-level hardening cannot substitute for an end-to-end payment test with the actual gateway and Monero environment.

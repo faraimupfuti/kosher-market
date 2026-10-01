@@ -9,7 +9,7 @@ COPY public ./public
 COPY vite.config.js ./
 RUN npm run build
 
-FROM php:8.3-cli AS vendor
+FROM php:8.3-fpm AS vendor
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git unzip libzip-dev libicu-dev libonig-dev libxml2-dev \
@@ -31,7 +31,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY --from=vendor /app/vendor ./vendor
 COPY . .
-COPY --from=frontend /app/public/build ./public/build
+COPY --from=frontend /app/public/build ./public/build\nCOPY docker/php-production.ini /usr/local/etc/php/conf.d/zz-production.ini
 
 RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views bootstrap/cache \
     && chown -R www-data:www-data storage bootstrap/cache \
@@ -43,5 +43,5 @@ RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framewor
 
 USER www-data
 
-EXPOSE 8000
-CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
+EXPOSE 9000
+CMD ["php-fpm", "-F"]

@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class BitcoinPayoutAddressVerification extends Model
+class MoneroPayoutAddressVerification extends Model
 {
     protected $fillable = [
         'vendor_id', 'address', 'token_hash', 'expires_at', 'verified_at', 'invalidated_at',

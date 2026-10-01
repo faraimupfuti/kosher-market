@@ -1,0 +1,44 @@
+<?php
+
+namespace App\Http\Controllers\Vendor;
+
+use App\Http\Controllers\Controller;
+use App\Services\MoneroPayoutAddressVerificationService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+
+class MoneroPayoutVerificationController extends Controller
+{
+    public function show()
+    {
+        $vendor = Auth::guard('vendor')->user();
+
+        return view('vendor.monero.verify-payout', compact('vendor'));
+    }
+
+    public function requestVerification(Request $request, MoneroPayoutAddressVerificationService $service)
+    {
+        $vendor = Auth::guard('vendor')->user();
+
+        if (! $vendor->xmr_payout_address) {
+            return back()->withErrors(['xmr_payout_address' => 'Add a Monero payout address first.']);
+        }
+
+        $token = $service->issue($vendor, $vendor->xmr_payout_address);
+
+        return back()->with('verification_token', $token)
+            ->with('success', 'Verification challenge created. Confirm it within 30 minutes.');
+    }
+
+    public function confirm(Request $request, MoneroPayoutAddressVerificationService $service)
+    {
+        $data = $request->validate([
+            'token' => ['required', 'string', 'size:64'],
+        ]);
+
+        $vendor = Auth::guard('vendor')->user();
+        $service->confirm($vendor, $data['token']);
+
+        return back()->with('success', 'Monero payout address verified. Withdrawals require administrator approval for this address.');
+    }
+}

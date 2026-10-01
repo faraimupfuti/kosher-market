@@ -14,7 +14,7 @@ use App\Http\Middleware\PreventRequestsDuringMaintenance;
 use App\Http\Middleware\RedirectIfAuthenticated;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\TrimStrings;
-use App\Http\Middleware\TrustProxies;
+use App\Http\Middleware\TrustProxies;\nuse App\Http\Middleware\TrustedHost;
 use App\Http\Middleware\ValidateSignature;
 use App\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Auth\Middleware\AuthenticateSession;

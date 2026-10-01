@@ -60,7 +60,7 @@ return [
     |
     */
 
-    'url' => env('APP_URL', 'http://localhost'),
+    'url' => env('APP_URL', 'http://localhost'),\n\n    'allowed_hosts' => array_values(array_filter(array_map('trim', explode(',', (string) env('APP_ALLOWED_HOSTS', ''))))),
 
     'asset_url' => env('ASSET_URL'),
 
