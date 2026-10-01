@@ -130,7 +130,7 @@ The endpoint checks application boot and database connectivity and returns HTTP 
 
 ## Docker
 
-Production uses PHP-FPM behind NGINX. PHP-FPM is kept on the private Docker network; the application is exposed through NGINX on localhost port 8000. Put a TLS-terminating reverse proxy/load balancer in front of that listener and forward the original host/protocol headers.
+Production uses PHP-FPM behind NGINX. MySQL uses the 8.4 LTS image. If upgrading an existing MySQL 8.0 data volume, take a verified logical backup and perform a tested MySQL upgrade procedure rather than attaching the old volume blindly. PHP-FPM is kept on the private Docker network; the application is exposed through NGINX on localhost port 8000. Put a TLS-terminating reverse proxy/load balancer in front of that listener and forward the original host/protocol headers.
 
 Create the environment file:
 
