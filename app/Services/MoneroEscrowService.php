@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Models\BitcoinSettlement;
+use App\Models\MoneroSettlement;
 use App\Models\EscrowLedgerEntry;
 use App\Models\EscrowTransaction;
 use App\Models\Order;
