@@ -59,7 +59,7 @@ class MoneroPayoutAddressVerificationService
             $verification->verified_at = now();
             $verification->save();
 
-            $vendor->bitcoin_payout_address_verified_at = now();
+            $vendor->xmr_payout_address_verified_at = now();
             $vendor->save();
         });
     }
