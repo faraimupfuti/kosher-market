@@ -130,6 +130,8 @@ The endpoint checks application boot and database connectivity and returns HTTP 
 
 ## Docker
 
+Production uses PHP-FPM behind NGINX. PHP-FPM is kept on the private Docker network; the application is exposed through NGINX on localhost port 8000. Put a TLS-terminating reverse proxy/load balancer in front of that listener and forward the original host/protocol headers.
+
 Create the environment file:
 
 ```bash
