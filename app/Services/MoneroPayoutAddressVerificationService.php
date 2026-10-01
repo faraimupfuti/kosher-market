@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Models\BitcoinPayoutAddressVerification;
+use App\Models\MoneroPayoutAddressVerification;
 use App\Models\Vendor;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
