@@ -28,7 +28,7 @@ class EscrowController extends Controller
     public function show(EscrowTransaction $escrow)
     {
         $customer=Auth::guard('customer')->user();abort_unless($customer&&(int)$escrow->buyer_id===(int)$customer->id,403);
-        return view('escrow.show',['escrow'=>$escrow->load(['order','vendor','disputes','settlements'])]);
+        return view('escrow.monero-show',['escrow'=>$escrow->load(['order','vendor','disputes','settlements'])]);
     }
 
     public function createPayment(Request $request,EscrowTransaction $escrow)
