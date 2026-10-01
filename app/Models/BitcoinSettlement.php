@@ -11,7 +11,7 @@ class BitcoinSettlement extends Model
 
     protected $fillable = [
         'escrow_transaction_id', 'vendor_id', 'type', 'amount', 'currency',
-        'destination_address', 'status', 'btcpay_payout_id', 'bitcoin_txid',
+        'destination_address', 'status', 'shkeeper_payout_id', 'bitcoin_txid',
         'error_message', 'submitted_at', 'approved_at', 'completed_at',
     ];
 
@@ -22,13 +22,6 @@ class BitcoinSettlement extends Model
         'completed_at' => 'datetime',
     ];
 
-    public function escrow()
-    {
-        return $this->belongsTo(EscrowTransaction::class, 'escrow_transaction_id');
-    }
-
-    public function vendor()
-    {
-        return $this->belongsTo(Vendor::class);
-    }
+    public function escrow() { return $this->belongsTo(EscrowTransaction::class, 'escrow_transaction_id'); }
+    public function vendor() { return $this->belongsTo(Vendor::class); }
 }

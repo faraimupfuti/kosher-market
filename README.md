@@ -2,20 +2,34 @@
 
 **Bitcoin-only multi-vendor marketplace with escrow-protected transactions.**
 
-Kosher Market is a Laravel marketplace for buyers, vendors and administrators. The repository is intentionally **Docker-first** and **manually operated**.
+Kosher Market is a Laravel marketplace for buyers, vendors and administrators. The repository is **Docker-first**, uses **SHKeeper** as its cryptocurrency payment gateway, and is intentionally **manually operated**.
+
+## Payment gateway
+
+SHKeeper is used for Bitcoin invoice creation, payment-address generation, payment callbacks and manually initiated payouts.
+
+Configure the SHKeeper wallet for BTC and set the webhook callback URL to:
+
+```text
+https://YOUR-MARKET-DOMAIN/bitcoin/shkeeper/webhook
+```
+
+SHKeeper webhook requests are verified using `X-Shkeeper-Timestamp` and `X-Shkeeper-Signature` before a payment is recorded.
 
 ## Operating model
 
-The application does not run settlement, escrow-release or reconciliation schedules automatically.
+The marketplace does not run settlement, escrow-release or reconciliation schedules automatically.
 
 - No Laravel scheduler service is started by Docker Compose.
 - No background queue worker is started by Docker Compose.
-- `QUEUE_CONNECTION=sync`, so application jobs execute synchronously with the initiating request.
+- `QUEUE_CONNECTION=sync`.
 - `ESCROW_AUTO_RELEASE=false`.
-- GitHub Actions, Render, Netlify and Kubernetes deployment automation are not part of the supported runtime.
-- Containers use `restart: "no"`, so starting and stopping the application is an explicit operator action.
+- `BITCOIN_AUTO_PAYOUTS=false`.
+- Containers use `restart: "no"`.
+- Escrow release and cryptocurrency payouts require explicit administrator action.
+- Database migrations are run manually.
 
-The underlying Artisan commands are still available for an administrator to run manually after review:
+The underlying Artisan commands remain available for explicit operator use:
 
 ```bash
 docker compose exec app php artisan escrow:release-eligible
@@ -28,7 +42,7 @@ docker compose exec app php artisan bitcoin:reconcile-payouts --limit=25
 - Laravel / PHP 8.3
 - Blade, Vite, JavaScript and Sass
 - MySQL 8
-- BTCPay Server
+- SHKeeper
 - Docker and Docker Compose
 
 ## Docker setup
@@ -45,15 +59,28 @@ Generate the Laravel application key inside Docker:
 docker compose run --rm app php artisan key:generate
 ```
 
-Review the BTCPay and marketplace settings in `.env`. Never commit wallet credentials, API secrets, seed phrases, private keys or webhook secrets.
+Configure these SHKeeper variables in `.env`:
 
-### 2. Build the images
+```env
+SHKEEPER_URL=https://your-shkeeper-domain
+SHKEEPER_API_KEY=your_wallet_api_key
+SHKEEPER_USERNAME=your_shkeeper_username
+SHKEEPER_PASSWORD=your_shkeeper_password
+SHKEEPER_FIAT=USD
+SHKEEPER_CALLBACK_URL=https://your-market-domain/bitcoin/shkeeper/webhook
+SHKEEPER_WEBHOOK_TOLERANCE_SECONDS=300
+SHKEEPER_BTC_PAYOUT_FEE=5
+```
+
+Never commit wallet credentials, API keys, passwords, private keys or webhook secrets.
+
+### 2. Build
 
 ```bash
 docker compose build
 ```
 
-### 3. Start the application manually
+### 3. Start manually
 
 ```bash
 docker compose up -d
@@ -71,56 +98,46 @@ http://localhost:8000
 docker compose exec app php artisan migrate
 ```
 
-Database migrations are deliberately not executed on container startup.
-
 ### 5. Logs
 
 ```bash
 docker compose logs -f app
 ```
 
-### 6. Stop the application manually
+### 6. Stop manually
 
 ```bash
 docker compose down
 ```
 
-To remove local database/application volumes as well:
-
-```bash
-docker compose down -v
-```
-
-**Warning:** `docker compose down -v` permanently removes the local MySQL and application-storage volumes.
-
 ## Manual Bitcoin operations
 
-Kosher Market coordinates order, escrow, dispute and settlement records, but wallet custody/signing stays outside the Laravel application.
+SHKeeper handles blockchain payment detection and provides payment callbacks. Kosher Market records the callback only after signature validation and payment checks.
 
-Before manually releasing escrow or processing settlements, verify the relevant order, payment confirmations, dispute state, vendor payout address and BTCPay records.
+Escrow release remains a marketplace decision. Releasing an escrow creates a pending seller settlement; it does **not** automatically submit the payout to SHKeeper.
 
-Useful manual commands:
+An administrator can explicitly submit a settlement through the existing admin settlement interface or manually invoke the settlement command. SHKeeper's payout API uses HTTP Basic authentication and returns an asynchronous payout task that can subsequently be checked.
+
+Useful commands:
 
 ```bash
 # Review and release eligible escrow records
 docker compose exec app php artisan escrow:release-eligible
 
-# Synchronize settlement state with BTCPay
+# Manually submit/synchronize settlements
 docker compose exec app php artisan bitcoin:settlements-sync
 
-# Reconcile a bounded number of payout records
+# Manually reconcile a bounded number of payout records
 docker compose exec app php artisan bitcoin:reconcile-payouts --limit=25
 ```
 
 ## Development checks
 
-Checks are run manually:
-
 ```bash
 docker compose exec app php artisan test
 ```
 
-Frontend and PHP dependencies are built into the Docker image. Rebuild after dependency or frontend changes:
+Rebuild after dependency or frontend changes:
 
 ```bash
 docker compose build --no-cache
@@ -129,4 +146,4 @@ docker compose up -d
 
 ## Production safety
 
-Do not use the application to hold or coordinate real Bitcoin until invoice creation, webhook verification, idempotency, confirmation handling, escrow transitions, payout-address verification, disputes/refunds, backup/recovery and operator procedures have been independently tested.
+Before accepting real Bitcoin, independently test invoice creation, webhook signature verification, replay protection, idempotency, partial/overpayment handling, confirmation policy, escrow transitions, vendor payout-address verification, payout failures, refunds, disputes, backups and recovery procedures.
