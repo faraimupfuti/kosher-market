@@ -198,6 +198,16 @@ Monitor:
 - failed SHKeeper payouts
 - administrator financial actions
 
+## Manual wallet reconciliation
+
+Before approving a vendor withdrawal, an administrator can reconcile the vendor wallet against its ledger:
+
+```bash
+docker compose exec app php artisan wallet:reconcile-xmr --vendor=VENDOR_ID
+```
+
+A non-zero exit code indicates a balance/ledger mismatch and should block further financial action until the discrepancy is investigated.
+
 ## Manual financial operations
 
 Kosher Market intentionally does not automate these actions:
