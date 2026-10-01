@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Vendor;
 
 use App\Http\Controllers\Controller;
-use App\Services\BitcoinPayoutAddressVerificationService;
+use App\Services\MoneroPayoutAddressVerificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -13,15 +13,15 @@ class BitcoinPayoutVerificationController extends Controller
     {
         $vendor = Auth::guard('vendor')->user();
 
-        return view('vendor.bitcoin.verify-payout', compact('vendor'));
+        return view('vendor.monero.verify-payout', compact('vendor'));
     }
 
     public function requestVerification(Request $request, BitcoinPayoutAddressVerificationService $service)
     {
         $vendor = Auth::guard('vendor')->user();
 
-        if (! $vendor->bitcoin_payout_address) {
-            return back()->withErrors(['bitcoin_payout_address' => 'Add a Bitcoin payout address first.']);
+        if (! $vendor->xmr_payout_address) {
+            return back()->withErrors(['bitcoin_payout_address' => 'Add a Monero payout address first.']);
         }
 
         $token = $service->issue($vendor, $vendor->bitcoin_payout_address);
@@ -39,6 +39,6 @@ class BitcoinPayoutVerificationController extends Controller
         $vendor = Auth::guard('vendor')->user();
         $service->confirm($vendor, $data['token']);
 
-        return back()->with('success', 'Bitcoin payout address verified. Automatic payouts are now enabled for this address.');
+        return back()->with('success', 'Bitcoin payout address verified. withdrawals require administrator approval for this address.');
     }
 }
