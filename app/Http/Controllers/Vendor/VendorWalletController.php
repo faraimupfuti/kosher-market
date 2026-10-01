@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Vendor;
 
 use App\Http\Controllers\Controller;
-use App\Models\VendorWalletTransaction;
 use App\Services\VendorWalletService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -25,8 +24,20 @@ class VendorWalletController extends Controller
     {
         $vendor = Auth::guard('vendor')->user();
         try {
-            $wallet = $this->wallets->allocateDepositAddress($vendor);
+            $this->wallets->allocateDepositAddress($vendor);
             return back()->with('success', 'Your Bitcoin deposit address is ready.');
+        } catch (Throwable $e) {
+            report($e);
+            return back()->withErrors(['wallet' => $e->getMessage()]);
+        }
+    }
+
+    public function sync()
+    {
+        $vendor = Auth::guard('vendor')->user();
+        try {
+            $count = $this->wallets->syncDeposits($vendor);
+            return back()->with('success', $count . ' confirmed deposit(s) added to your wallet.');
         } catch (Throwable $e) {
             report($e);
             return back()->withErrors(['wallet' => $e->getMessage()]);
@@ -35,12 +46,10 @@ class VendorWalletController extends Controller
 
     public function withdraw(Request $request)
     {
-        $data = $request->validate([
-            'amount_btc' => ['required', 'string', 'regex:/^\d+(\.\d{1,8})?$/'],
-        ]);
+        $data = $request->validate(['amount_btc' => ['required', 'string', 'regex:/^\d+(\.\d{1,8})?$/']]);
         $vendor = Auth::guard('vendor')->user();
         try {
-            $settlement = $this->wallets->requestWithdrawal($vendor, $data['amount_btc']);
+            $this->wallets->requestWithdrawal($vendor, $data['amount_btc']);
             return back()->with('success', 'Withdrawal request submitted for administrator review.');
         } catch (Throwable $e) {
             report($e);
