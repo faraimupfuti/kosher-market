@@ -41,7 +41,7 @@ class EscrowController extends Controller
     public function confirmReceipt(EscrowTransaction $escrow)
     {
         $customer=Auth::guard('customer')->user();abort_unless($customer&&(int)$escrow->buyer_id===(int)$customer->id,403);
-        try{$released=$this->escrow->release($escrow,'Buyer confirmed receipt.');return response()->json(['success'=>true,'status'=>'released']);}catch(Throwable $e){return response()->json(['message'=>$e->getMessage()],422);}
+        try{if($escrow->status!=='funded')return response()->json(['message'=>'Only funded escrow can request release.'],422);$escrow->update(['release_requested_at'=>now(),'release_requested_by_customer_id'=>$customer->id]);return response()->json(['success'=>true,'status'=>'release_requested']);}catch(Throwable $e){return response()->json(['message'=>'Unable to request escrow release.'],422);}
     }
 
     public function dispute(Request $request,EscrowTransaction $escrow)
