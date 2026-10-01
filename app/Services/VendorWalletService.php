@@ -103,7 +103,7 @@ class VendorWalletService
             $wallet=VendorWallet::where('vendor_id',$vendor->id)->lockForUpdate()->first();
             if(!$wallet||MoneroAmount::cmp((string)$wallet->xmr_atomic_available,$amount)<0) throw new RuntimeException('Insufficient available XMR wallet balance.');
             $destination=trim((string)$vendor->xmr_payout_address);
-            if(!preg_match('/^4[0-9AB][1-9A-HJ-NP-Za-km-z]{93}$/',$destination)) throw new RuntimeException('Set a valid Monero withdrawal address first.');
+            if(!preg_match('/^(?:4|8)[1-9A-HJ-NP-Za-km-z]{94}$/',$destination)) throw new RuntimeException('Set a valid Monero withdrawal address first.');
             if(!$vendor->xmr_payout_address_verified_at) throw new RuntimeException('Your Monero withdrawal address must be verified first.');
             $settlement=BitcoinSettlement::create(['escrow_transaction_id'=>null,'vendor_id'=>$vendor->id,'type'=>'vendor_withdrawal','amount'=>MoneroAmount::fromAtomic($amount),'currency'=>'XMR','destination_address'=>$destination,'status'=>'pending']);
             $available=MoneroAmount::sub((string)$wallet->xmr_atomic_available,$amount);
