@@ -30,7 +30,7 @@ services:
     networks:
       - kosher-market
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8000/ >/dev/null || exit 1"]
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8000/up >/dev/null || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5
