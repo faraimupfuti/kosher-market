@@ -86,12 +86,12 @@ class MoneroEscrowService
             if(!$escrow->canTransitionTo('refund_pending')) throw new RuntimeException('Only funded or disputed escrow can be refunded.');
             $escrow->transitionTo('refund_pending'); $escrow->update(['status'=>'refund_pending','refund_note'=>$note]);
             if(!$escrow->ledgerEntries()->where('type','buyer_refund_due')->exists()) EscrowLedgerEntry::create(['escrow_transaction_id'=>$escrow->id,'type'=>'buyer_refund_due','amount'=>$escrow->xmr_amount?:$escrow->amount,'currency'=>'XMR','reference'=>'XMR-REFUND-'.$escrow->id]);
-            BitcoinSettlement::firstOrCreate(['escrow_transaction_id'=>$escrow->id,'type'=>'buyer_refund'],['vendor_id'=>null,'amount'=>$escrow->xmr_amount?:$escrow->amount,'currency'=>'XMR','status'=>'needs_destination','xmr_amount'=>$escrow->xmr_amount?:$escrow->amount]);
+            MoneroSettlement::firstOrCreate(['escrow_transaction_id'=>$escrow->id,'type'=>'buyer_refund'],['vendor_id'=>null,'amount'=>$escrow->xmr_amount?:$escrow->amount,'currency'=>'XMR','status'=>'needs_destination','xmr_amount'=>$escrow->xmr_amount?:$escrow->amount]);
             return $escrow;
         });
     }
 
-    public function submitSettlement(BitcoinSettlement $settlement): BitcoinSettlement
+    public function submitSettlement(MoneroSettlement $settlement): MoneroSettlement
     {
         if(in_array($settlement->status,['completed','in_progress'],true)||$settlement->shkeeper_payout_id)return $settlement;
         if(!$settlement->destination_address) throw new RuntimeException('Settlement destination is missing.');
@@ -105,7 +105,7 @@ class MoneroEscrowService
         $settlement->update(['status'=>'in_progress','shkeeper_payout_id'=>$taskId,'submitted_at'=>now(),'error_message'=>null]); return $settlement->fresh();
     }
 
-    public function syncSettlement(BitcoinSettlement $settlement): BitcoinSettlement
+    public function syncSettlement(MoneroSettlement $settlement): MoneroSettlement
     {
         if(!$settlement->shkeeper_payout_id) return $settlement;
         $base=rtrim((string)config('monero.shkeeper_url'),'/'); $key=(string)config('monero.shkeeper_api_key');
@@ -117,5 +117,5 @@ class MoneroEscrowService
         return $settlement->fresh();
     }
 
-    public function approveSettlement(BitcoinSettlement $settlement): BitcoinSettlement { return $this->syncSettlement($settlement); }
+    public function approveSettlement(MoneroSettlement $settlement): MoneroSettlement { return $this->syncSettlement($settlement); }
 }
