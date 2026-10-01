@@ -1,8 +1,8 @@
 {
     "name": "faraimupfuti/kosher-market",
     "type": "project",
-    "description": "Kosher Market - A Bitcoin-only multi-vendor Laravel marketplace with escrow-protected transactions and global shipping.",
-    "keywords": ["bitcoin", "btc", "marketplace", "ecommerce", "escrow", "multi-vendor", "laravel", "btcpay", "global-shipping"],
+    "description": "Kosher Market - A Monero-first multi-vendor Laravel marketplace with manually controlled escrow, vendor wallets and global shipping.",
+    "keywords": ["monero", "xmr", "marketplace", "ecommerce", "escrow", "multi-vendor", "laravel", "shkeeper", "global-shipping"],
     "license": "MIT",
     "require": {
         "php": "^8.3",
