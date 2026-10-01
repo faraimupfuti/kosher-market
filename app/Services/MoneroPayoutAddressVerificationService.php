@@ -13,14 +13,14 @@ class MoneroPayoutAddressVerificationService
     public function issue(Vendor $vendor, string $address): string
     {
         return DB::transaction(function () use ($vendor, $address) {
-            BitcoinPayoutAddressVerification::where('vendor_id', $vendor->id)
+            MoneroPayoutAddressVerification::where('vendor_id', $vendor->id)
                 ->whereNull('verified_at')
                 ->whereNull('invalidated_at')
                 ->update(['invalidated_at' => now()]);
 
             $token = Str::random(64);
 
-            BitcoinPayoutAddressVerification::create([
+            MoneroPayoutAddressVerification::create([
                 'vendor_id' => $vendor->id,
                 'address' => $address,
                 'token_hash' => hash('sha256', $token),
@@ -34,7 +34,7 @@ class MoneroPayoutAddressVerificationService
     public function confirm(Vendor $vendor, string $token): void
     {
         DB::transaction(function () use ($vendor, $token) {
-            $verification = BitcoinPayoutAddressVerification::where('vendor_id', $vendor->id)
+            $verification = MoneroPayoutAddressVerification::where('vendor_id', $vendor->id)
                 ->where('token_hash', hash('sha256', $token))
                 ->whereNull('verified_at')
                 ->whereNull('invalidated_at')
