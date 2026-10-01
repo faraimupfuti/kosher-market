@@ -93,7 +93,7 @@ class MoneroEscrowService
 
     public function submitSettlement(BitcoinSettlement $settlement): BitcoinSettlement
     {
-        if($settlement->status==='completed') return $settlement;
+        if(in_array($settlement->status,['completed','in_progress'],true)||$settlement->shkeeper_payout_id)return $settlement;
         if(!$settlement->destination_address) throw new RuntimeException('Settlement destination is missing.');
         if(!preg_match('/^(?:4|8)[1-9A-HJ-NP-Za-km-z]{94}$/',$settlement->destination_address)) throw new RuntimeException('Only valid Monero primary addresses are accepted.');
         $base=rtrim((string)config('monero.shkeeper_url'),'/'); $user=(string)config('monero.shkeeper_username'); $pass=(string)config('monero.shkeeper_password');
