@@ -95,7 +95,7 @@ class VendorWalletService
         });
     }
 
-    public function requestWithdrawal(Vendor $vendor,string $amountXmr): BitcoinSettlement
+    public function requestWithdrawal(Vendor $vendor,string $amountXmr): MoneroSettlement
     {
         $amount=MoneroAmount::toAtomic($amountXmr);
         if(MoneroAmount::cmp($amount,'0')<=0) throw new RuntimeException('Withdrawal amount must be greater than zero.');
@@ -105,7 +105,7 @@ class VendorWalletService
             $destination=trim((string)$vendor->xmr_payout_address);
             if(!preg_match('/^(?:4|8)[1-9A-HJ-NP-Za-km-z]{94}$/',$destination)) throw new RuntimeException('Set a valid Monero withdrawal address first.');
             if(!$vendor->xmr_payout_address_verified_at) throw new RuntimeException('Your Monero withdrawal address must be verified first.');
-            $settlement=BitcoinSettlement::create(['escrow_transaction_id'=>null,'vendor_id'=>$vendor->id,'type'=>'vendor_withdrawal','amount'=>MoneroAmount::fromAtomic($amount),'currency'=>'XMR','destination_address'=>$destination,'status'=>'pending']);
+            $settlement=MoneroSettlement::create(['escrow_transaction_id'=>null,'vendor_id'=>$vendor->id,'type'=>'vendor_withdrawal','amount'=>MoneroAmount::fromAtomic($amount),'currency'=>'XMR','destination_address'=>$destination,'status'=>'pending']);
             $available=MoneroAmount::sub((string)$wallet->xmr_atomic_available,$amount);
             $locked=MoneroAmount::add((string)$wallet->xmr_atomic_locked,$amount);
             $wallet->update(['crypto'=>'XMR','xmr_atomic_available'=>$available,'xmr_atomic_locked'=>$locked]);
@@ -114,7 +114,7 @@ class VendorWalletService
         });
     }
 
-    public function finalizeWithdrawal(BitcoinSettlement $settlement,bool $success): void
+    public function finalizeWithdrawal(MoneroSettlement $settlement,bool $success): void
     {
         DB::transaction(function()use($settlement,$success){
             $wallet=VendorWallet::where('vendor_id',$settlement->vendor_id)->lockForUpdate()->firstOrFail();
