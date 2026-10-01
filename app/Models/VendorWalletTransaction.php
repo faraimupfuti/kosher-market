@@ -11,6 +11,6 @@ class VendorWalletTransaction extends Model
     protected $casts=['amount_satoshis'=>'integer','balance_after_satoshis'=>'integer','xmr_atomic_amount'=>'string','xmr_atomic_balance_after'=>'string','metadata'=>'array'];
     public function wallet(){return $this->belongsTo(VendorWallet::class,'vendor_wallet_id');}
     public function escrow(){return $this->belongsTo(EscrowTransaction::class,'escrow_transaction_id');}
-    public function settlement(){return $this->belongsTo(BitcoinSettlement::class,'bitcoin_settlement_id');}
+    public function settlement(){return $this->belongsTo(MoneroSettlement::class,'bitcoin_settlement_id');}
     public function amountXmr():string{return MoneroAmount::fromAtomic((string)($this->metadata['atomic_amount']??'0'));}
 }
