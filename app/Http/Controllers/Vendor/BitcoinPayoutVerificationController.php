@@ -21,10 +21,10 @@ class BitcoinPayoutVerificationController extends Controller
         $vendor = Auth::guard('vendor')->user();
 
         if (! $vendor->xmr_payout_address) {
-            return back()->withErrors(['bitcoin_payout_address' => 'Add a Monero payout address first.']);
+            return back()->withErrors(['xmr_payout_address' => 'Add a Monero payout address first.']);
         }
 
-        $token = $service->issue($vendor, $vendor->bitcoin_payout_address);
+        $token = $service->issue($vendor, $vendor->xmr_payout_address);
 
         return back()->with('verification_token', $token)
             ->with('success', 'Verification challenge created. Confirm it within 30 minutes.');
