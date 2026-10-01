@@ -31,7 +31,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY --from=vendor /app/vendor ./vendor
 COPY . .
-COPY --from=frontend /app/public/build ./public/build
+COPY --from=frontend /app/public/build ./public/build\nCOPY docker/php-production.ini /usr/local/etc/php/conf.d/zz-production.ini
 
 RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views bootstrap/cache \
     && chown -R www-data:www-data storage bootstrap/cache \
