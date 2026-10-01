@@ -4,11 +4,11 @@
     <div class="card">
         <div class="card-body">
             <h3>Verify Monero Payout Address</h3>
-            <p class="text-muted">Verification is required before Kosher Market can send automatic XMR payouts to this address.</p>
+            <p class="text-muted">Verification is required before Kosher Market can send manual XMR withdrawals to this address.</p>
             @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
             @if($errors->any())<div class="alert alert-danger">{{ $errors->first() }}</div>@endif
 
-            <p><strong>Address:</strong> <code>{{ $vendor->monero_payout_address }}</code></p>
+            <p><strong>Address:</strong> <code>{{ $vendor->xmr_payout_address }}</code></p>
 
             @if(session('verification_token'))
                 <div class="alert alert-warning">
