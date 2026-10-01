@@ -17,7 +17,7 @@ class VendorWalletController extends Controller
         $vendor = Auth::guard('vendor')->user();
         $wallet = $this->wallets->walletFor($vendor);
         $transactions = $wallet->transactions()->latest()->paginate(20);
-        return view('vendor.bitcoin.wallet', compact('vendor', 'wallet', 'transactions'));
+        return view('vendor.monero.wallet', compact('vendor', 'wallet', 'transactions'));
     }
 
     public function generateAddress()
@@ -25,7 +25,7 @@ class VendorWalletController extends Controller
         $vendor = Auth::guard('vendor')->user();
         try {
             $this->wallets->allocateDepositAddress($vendor);
-            return back()->with('success', 'Your Bitcoin deposit address is ready.');
+            return back()->with('success', 'Your Monero deposit address is ready.');
         } catch (Throwable $e) {
             report($e);
             return back()->withErrors(['wallet' => $e->getMessage()]);
@@ -46,7 +46,7 @@ class VendorWalletController extends Controller
 
     public function withdraw(Request $request)
     {
-        $data = $request->validate(['amount_btc' => ['required', 'string', 'regex:/^\d+(\.\d{1,8})?$/']]);
+        $data = $request->validate(['amount_xmr' => ['required', 'string', 'regex:/^\d+(\.\d{1,12})?$/']]);
         $vendor = Auth::guard('vendor')->user();
         try {
             $this->wallets->requestWithdrawal($vendor, $data['amount_btc']);
