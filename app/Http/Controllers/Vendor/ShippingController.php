@@ -43,8 +43,8 @@ class ShippingController extends Controller
         $data = $request->validate([
             'shipping_zone_id' => ['required', 'integer', 'exists:vendor_shipping_zones,id'],
             'service_name' => ['required', 'string', 'max:100'],
-            'price_btc' => ['required', 'numeric', 'min:0', 'max:21000000'],
-            'free_shipping_threshold_btc' => ['nullable', 'numeric', 'min:0', 'max:21000000'],
+            'price_xmr' => ['required', 'numeric', 'min:0', 'max:1000000'],
+            'free_shipping_threshold_xmr' => ['nullable', 'numeric', 'min:0', 'max:21000000'],
             'min_delivery_days' => ['required', 'integer', 'min:0', 'max:365'],
             'max_delivery_days' => ['required', 'integer', 'gte:min_delivery_days', 'max:365'],
             'tracking_url_template' => ['nullable', 'url', 'max:500'],
