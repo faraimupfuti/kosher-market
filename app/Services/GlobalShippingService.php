@@ -9,11 +9,11 @@ use Illuminate\Validation\ValidationException;
 class GlobalShippingService
 {
     /**
-     * Return active shipping options for a product and destination country.
+     * Return active shipping options for a product and destination country in XMR.
      * Products with no explicit country restrictions remain globally shippable,
      * while products with configured countries are restricted to those countries.
      */
-    public function options(Product $product, string $countryCode, float $cartSubtotalBtc = 0): array
+    public function options(Product $product, string $countryCode, float $cartSubtotalXmr = 0): array
     {
         $countryCode = strtoupper(trim($countryCode));
 
@@ -33,13 +33,13 @@ class GlobalShippingService
             ->get();
 
         return $rates->map(function (VendorShippingRate $rate) use ($cartSubtotalBtc) {
-            $free = $rate->free_shipping_threshold_btc !== null
+            $free = $rate->free_shipping_threshold_xmr !== null
                 && $cartSubtotalBtc >= (float) $rate->free_shipping_threshold_btc;
 
             return [
                 'id' => $rate->id,
                 'service_name' => $rate->service_name,
-                'price_btc' => $free ? 0.0 : (float) $rate->price_btc,
+                'price_xmr' => $free ? 0.0 : (float) $rate->price_xmr,
                 'min_delivery_days' => $rate->min_delivery_days,
                 'max_delivery_days' => $rate->max_delivery_days,
                 'tracking_url_template' => $rate->tracking_url_template,
