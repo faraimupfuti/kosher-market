@@ -7,8 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class VendorWalletTransaction extends Model
 {
-    protected $fillable=['vendor_wallet_id','type','amount_satoshis','balance_after_satoshis','reference','status','escrow_transaction_id','bitcoin_settlement_id','txid','metadata'];
-    protected $casts=['amount_satoshis'=>'integer','balance_after_satoshis'=>'integer','metadata'=>'array'];
+    protected $fillable=['vendor_wallet_id','type','amount_satoshis','balance_after_satoshis','reference','status','escrow_transaction_id','bitcoin_settlement_id','txid','xmr_atomic_amount','xmr_atomic_balance_after','metadata'];
+    protected $casts=['amount_satoshis'=>'integer','balance_after_satoshis'=>'integer','xmr_atomic_amount'=>'string','xmr_atomic_balance_after'=>'string','metadata'=>'array'];
     public function wallet(){return $this->belongsTo(VendorWallet::class,'vendor_wallet_id');}
     public function escrow(){return $this->belongsTo(EscrowTransaction::class,'escrow_transaction_id');}
     public function settlement(){return $this->belongsTo(BitcoinSettlement::class,'bitcoin_settlement_id');}
