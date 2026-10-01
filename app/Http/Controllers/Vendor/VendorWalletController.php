@@ -49,7 +49,7 @@ class VendorWalletController extends Controller
         $data = $request->validate(['amount_xmr' => ['required', 'string', 'regex:/^\d+(\.\d{1,12})?$/']]);
         $vendor = Auth::guard('vendor')->user();
         try {
-            $this->wallets->requestWithdrawal($vendor, $data['amount_btc']);
+            $this->wallets->requestWithdrawal($vendor, $data['amount_xmr']);
             return back()->with('success', 'Withdrawal request submitted for administrator review.');
         } catch (Throwable $e) {
             report($e);
