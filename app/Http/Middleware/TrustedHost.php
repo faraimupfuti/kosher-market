@@ -10,7 +10,7 @@ class TrustedHost
 {
     public function handle(Request $request, Closure $next): Response
     {
-        $configured=array_values(array_filter(array_map('trim',explode(',',(string)env('APP_ALLOWED_HOSTS','')))));
+        $configured=config('app.allowed_hosts', []);
         if($configured){
             $host=strtolower($request->getHost());
             $allowed=false;
