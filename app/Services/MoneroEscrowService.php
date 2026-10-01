@@ -74,7 +74,7 @@ class MoneroEscrowService
             $fee=(string)($escrow->xmr_platform_fee?:$escrow->platform_fee); $seller=(string)($escrow->xmr_seller_amount?:$escrow->seller_amount);
             $escrow->transitionTo('released'); $escrow->update(['status'=>'released','released_at'=>now(),'release_note'=>$note]);
             if(!$escrow->ledgerEntries()->where('type','seller_payout_due')->exists()) EscrowLedgerEntry::create(['escrow_transaction_id'=>$escrow->id,'type'=>'seller_payout_due','amount'=>$seller,'currency'=>'XMR','reference'=>'XMR-ESCROW-'.$escrow->id]);
-            PlatformRevenueEntry::firstOrCreate(['reference'=>'XMR-SALE-COMMISSION-'.$escrow->id],['type'=>'sale_commission','vendor_id'=>$escrow->vendor_id,'order_id'=>$escrow->order_id,'escrow_transaction_id'=>$escrow->id,'amount_btc'=>$fee,'amount_satoshis'=>0,'status'=>'earned','description'=>'Kosher Market commission earned when XMR escrow was released.','earned_at'=>now()]);
+            PlatformRevenueEntry::firstOrCreate(['reference'=>'XMR-SALE-COMMISSION-'.$escrow->id],['type'=>'sale_commission','vendor_id'=>$escrow->vendor_id,'order_id'=>$escrow->order_id,'escrow_transaction_id'=>$escrow->id,'amount_btc'=>null,'amount_satoshis'=>0,'amount_xmr'=>$fee,'status'=>'earned','description'=>'Kosher Market commission earned when XMR escrow was released.','earned_at'=>now()]);
             app(VendorWalletService::class)->creditFromEscrow($escrow); return $escrow;
         });
     }
