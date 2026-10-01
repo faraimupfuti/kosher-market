@@ -1,7 +1,7 @@
 <?php
 namespace App\Http\Controllers\Vendor;
 use App\Http\Controllers\Controller;
-use App\Models\BitcoinSettlement;
+use App\Models\MoneroSettlement;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
