@@ -45,7 +45,7 @@ class MoneroEscrowService
         ]);
         if($response->failed()||($response->json('status')??'success')==='error') throw new RuntimeException('SHKeeper XMR invoice creation failed: '.($response->json('message')??$response->body()));
         $invoice=$response->json(); $invoiceAmount=(string)($invoice['amount']??'');
-        if($invoiceAmount!==''&&MoneroAmount::cmp(MoneroAmount::toAtomic($invoiceAmount),MoneroAmount::toAtomic($xmrAmount))!==0) throw new RuntimeException('SHKeeper XMR invoice amount does not match the escrow amount.');
+        if($invoiceAmount!==''&&abs((int)bcsub(MoneroAmount::toAtomic($invoiceAmount),MoneroAmount::toAtomic($xmrAmount),0))>1) throw new RuntimeException('SHKeeper XMR invoice amount does not match the escrow amount.');
         $escrow->update(['shkeeper_invoice_id'=>(string)($invoice['id']??$escrow->id),'xmr_payment_address'=>$invoice['wallet']??null,'xmr_amount'=>$invoiceAmount?:$xmrAmount]);
         return $invoice;
     }
