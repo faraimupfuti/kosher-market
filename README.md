@@ -176,6 +176,20 @@ The Docker runtime does not start Laravel schedulers or queue workers and does n
 
 ## Backups and recovery
 
+Manual backup:
+
+```bash
+bash ops/backup.sh ./backups/$(date -u +%Y%m%dT%H%M%SZ)
+```
+
+Manual restore:
+
+```bash
+bash ops/restore.sh ./backups/20261001T120000Z
+```
+
+The restore script requires an explicit `RESTORE` confirmation and should only be used during a controlled recovery window.
+
 A production operator must back up:
 - MySQL
 - Laravel storage that contains business-critical files
