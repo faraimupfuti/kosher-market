@@ -41,8 +41,8 @@ return new class extends Migration {
         }
         if (Schema::hasTable('vendor_wallets')) {
             Schema::table('vendor_wallets', function(Blueprint $table) {
-                if (!Schema::hasColumn('vendor_wallets','xmr_atomic_available')) $table->unsignedBigInteger('xmr_atomic_available')->default(0);
-                if (!Schema::hasColumn('vendor_wallets','xmr_atomic_locked')) $table->unsignedBigInteger('xmr_atomic_locked')->default(0);
+                if (!Schema::hasColumn('vendor_wallets','xmr_atomic_available')) $table->decimal('xmr_atomic_available',30,0)->default('0');
+                if (!Schema::hasColumn('vendor_wallets','xmr_atomic_locked')) $table->decimal('xmr_atomic_locked',30,0)->default('0');
                 if (!Schema::hasColumn('vendor_wallets','xmr_deposit_address')) $table->string('xmr_deposit_address',180)->nullable()->unique();
             });
         }
