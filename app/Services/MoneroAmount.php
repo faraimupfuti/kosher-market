@@ -6,44 +6,45 @@ use InvalidArgumentException;
 
 final class MoneroAmount
 {
-    public const ATOMIC_UNITS_PER_XMR = 1_000_000_000_000;
-
-    public static function toAtomic(string|int|float $xmr): int
+    public static function normalize(string|int|float $xmr): string
     {
-        $value = trim((string) $xmr);
-        if (!preg_match('/^(?:0|[1-9]\d*)(?:\.\d{1,12})?$/', $value)) {
-            throw new InvalidArgumentException('Invalid Monero amount.');
-        }
+        $value=trim((string)$xmr);
+        if(!preg_match('/^(?:0|[1-9]\d*)(?:\.\d{1,12})?$/',$value)) throw new InvalidArgumentException('Invalid Monero amount.');
         [$whole,$fraction]=array_pad(explode('.',$value,2),2,'');
-        $fraction=str_pad($fraction,12,'0');
-        $wholeUnits=self::safeMultiply((int)$whole,self::ATOMIC_UNITS_PER_XMR);
-        $atomic=$wholeUnits+(int)$fraction;
-        if($atomic<0) throw new InvalidArgumentException('Monero amount cannot be negative.');
-        return $atomic;
+        return (int)$whole.'.'.str_pad($fraction,12,'0');
     }
 
-    public static function fromAtomic(int $atomic): string
+    public static function toAtomic(string|int|float $xmr): string
     {
-        if($atomic<0) throw new InvalidArgumentException('Atomic units cannot be negative.');
-        $whole=intdiv($atomic,self::ATOMIC_UNITS_PER_XMR);
-        $fraction=$atomic%self::ATOMIC_UNITS_PER_XMR;
-        return sprintf('%d.%012d',$whole,$fraction);
+        [$whole,$fraction]=explode('.',self::normalize($xmr),2);
+        return ltrim($whole.str_pad($fraction,12,'0'),'0') ?: '0';
     }
 
-    public static function percentOf(int $atomic,string $percent): int
+    public static function fromAtomic(string|int $atomic): string
     {
-        $percent=trim($percent);
-        if($atomic<0 || !preg_match('/^(?:0|\d+)(?:\.\d{1,4})?$/',$percent)) throw new InvalidArgumentException('Invalid fee calculation.');
-        [$whole,$fraction]=array_pad(explode('.',$percent,2),2,'');
-        $basis=((int)$whole*10000)+(int)str_pad($fraction,4,'0');
-        $fee=intdiv(($atomic*$basis)+5000,10000*100);
-        if($atomic>0 && $basis>0 && $fee===0) return 1;
+        $value=trim((string)$atomic);
+        if(!preg_match('/^\d+$/',$value)) throw new InvalidArgumentException('Invalid Monero atomic amount.');
+        $value=str_pad($value,13,'0',STR_PAD_LEFT);
+        $whole=rtrim(substr($value,0,-12),'0') ?: '0';
+        $fraction=rtrim(substr($value,-12),'0');
+        return $whole.($fraction===''?'':'.'.$fraction);
+    }
+
+    public static function add(string $a,string $b): string { return bcadd($a,$b,0); }
+    public static function sub(string $a,string $b): string
+    {
+        if(bccomp($a,$b,0)<0) throw new InvalidArgumentException('Monero balance cannot be negative.');
+        return bcsub($a,$b,0);
+    }
+    public static function cmp(string $a,string $b): int { return bccomp($a,$b,0); }
+
+    public static function percentOf(string $atomic,string $percent): string
+    {
+        if(!preg_match('/^(?:0|\d+)(?:\.\d{1,4})?$/',trim($percent))) throw new InvalidArgumentException('Invalid fee calculation.');
+        [$whole,$fraction]=array_pad(explode('.',trim($percent),2),2,'');
+        $basis=(string)(((int)$whole*10000)+(int)str_pad($fraction,4,'0'));
+        $fee=bcdiv(bcmul($atomic,$basis,0),'1000000',0);
+        if(bccomp($atomic,'0',0)>0 && bccomp($basis,'0',0)>0 && bccomp($fee,'0',0)===0) return '1';
         return $fee;
-    }
-
-    private static function safeMultiply(int $a,int $b): int
-    {
-        if($a<0 || $b<0 || $a > intdiv(PHP_INT_MAX,$b)) throw new InvalidArgumentException('Monero amount is too large.');
-        return $a*$b;
     }
 }
