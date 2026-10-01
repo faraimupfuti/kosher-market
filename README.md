@@ -15,7 +15,7 @@ SHKeeper is used for:
 - XMR transaction lookup
 - manually initiated XMR payouts
 
-SHKeeper documents XMR support, invoice-based payment addresses, HMAC-SHA256 webhook signing, and the XMR single-payout API. citeturn2search0turn1search1
+SHKeeper documents XMR support, invoice-based payment addresses, HMAC-SHA256 webhook signing, and the XMR single-payout API.
 
 Configure the callback URL as:
 
@@ -45,7 +45,7 @@ Escrow funded after configured confirmations
 Administrator manually releases or refunds
 ```
 
-SHKeeper's callback is verified against the raw HTTP body using HMAC-SHA256 and the API key, with timestamp replay protection. citeturn1search1
+SHKeeper's callback is verified against the raw HTTP body using HMAC-SHA256 and the API key, with timestamp replay protection.
 
 Duplicate callbacks are idempotent. Escrow state transitions are locked inside database transactions so two concurrent administrators cannot release the same escrow twice.
 
@@ -99,7 +99,7 @@ Wallet mutations and escrow credits occur inside database transactions with row 
 
 ## Overpayments and partial payments
 
-SHKeeper can report PARTIAL, PAID and OVERPAID invoice states. Kosher Market does not treat a partial payment as funded. An overpaid invoice is accepted only after the full escrow amount is covered; the excess must be handled according to the marketplace's refund/credit policy before real-money operation. citeturn2search0
+SHKeeper can report PARTIAL, PAID and OVERPAID invoice states. Kosher Market does not treat a partial payment as funded. An overpaid invoice is accepted only after the full escrow amount is covered; the excess must be handled according to the marketplace's refund/credit policy before real-money operation.
 
 ## Production safety
 
@@ -110,7 +110,7 @@ APP_ENV=production
 APP_DEBUG=false
 ```
 
-Laravel recommends production configuration/event/route/view caching and explicitly warns against enabling debug mode in production. citeturn0search3
+Laravel recommends production configuration/event/route/view caching and explicitly warns against enabling debug mode in production.
 
 After the production environment is configured, run:
 
@@ -118,7 +118,7 @@ After the production environment is configured, run:
 docker compose exec app php artisan optimize
 ```
 
-Do **not** run `php artisan optimize` until the production environment variables are loaded, because Laravel's cached configuration must contain the intended production values. citeturn0search0
+Do **not** run `php artisan optimize` until the production environment variables are loaded, because Laravel's cached configuration must contain the intended production values.
 
 Health endpoint:
 
@@ -235,7 +235,7 @@ Before accepting real XMR, test the complete SHKeeper demo/testnet flow:
 18. Test a dispute.
 19. Verify database backup and restore.
 
-SHKeeper provides a demo environment operating on testnet, which is appropriate for integration testing before real funds are introduced. citeturn1search0
+SHKeeper provides a demo environment operating on testnet, which is appropriate for integration testing before real funds are introduced.
 
 ## Important
 
