@@ -18,11 +18,15 @@ class Kernel extends ConsoleKernel
         ReconcileBitcoinPayouts::class,
     ];
 
+    /**
+     * No marketplace or settlement actions are scheduled automatically.
+     *
+     * Operational commands remain registered so an administrator can invoke
+     * them explicitly after reviewing the relevant orders/settlements.
+     */
     protected function schedule(Schedule $schedule): void
     {
-        $schedule->command('escrow:release-eligible')->hourly()->withoutOverlapping();
-        $schedule->command('bitcoin:settlements-sync')->everyFiveMinutes()->withoutOverlapping();
-        $schedule->command('bitcoin:reconcile-payouts --limit=25')->everyFiveMinutes()->withoutOverlapping();
+        // Intentionally empty: Kosher Market is manually operated.
     }
 
     protected function commands(): void
