@@ -6,7 +6,7 @@ Kosher Market is a Laravel marketplace for buyers, vendors and administrators. T
 
 ## Payment gateway
 
-SHKeeper is used for Bitcoin invoice creation, payment-address generation, payment callbacks and manually initiated payouts. SHKeeper's invoice API accepts an external ID, fiat amount and callback URL; payment callbacks are authenticated with HMAC-SHA256. citeturn1search0turn1search0
+SHKeeper is used for Bitcoin invoice creation, payment-address generation, payment callbacks and manually initiated payouts.
 
 Configure the SHKeeper wallet for BTC and set the webhook callback URL to:
 
@@ -14,7 +14,7 @@ Configure the SHKeeper wallet for BTC and set the webhook callback URL to:
 https://YOUR-MARKET-DOMAIN/bitcoin/shkeeper/webhook
 ```
 
-SHKeeper webhook requests are verified using `X-Shkeeper-Timestamp` and `X-Shkeeper-Signature` before a payment is recorded. SHKeeper documents a 202 Accepted response for successfully processed callbacks and retries unsuccessful deliveries. citeturn0search2turn0search4
+SHKeeper webhook requests are verified using `X-Shkeeper-Timestamp` and `X-Shkeeper-Signature` before a payment is recorded.
 
 ## Operating model
 
@@ -116,7 +116,7 @@ SHKeeper handles blockchain payment detection and provides payment callbacks. Ko
 
 Escrow release remains a marketplace decision. Releasing an escrow creates a pending seller settlement; it does **not** automatically submit the payout to SHKeeper.
 
-An administrator can explicitly submit a settlement through the existing admin settlement interface or manually invoke the settlement command. SHKeeper's payout API requires HTTP Basic authentication and returns an asynchronous payout task that can subsequently be checked. citeturn1search0
+An administrator can explicitly submit a settlement through the existing admin settlement interface or manually invoke the settlement command. SHKeeper's payout API uses HTTP Basic authentication and returns an asynchronous payout task that can subsequently be checked.
 
 Useful commands:
 
