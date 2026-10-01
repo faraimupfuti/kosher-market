@@ -24,7 +24,7 @@ use App\Http\Controllers\Admin\ProfileController;
 use App\Http\Controllers\Admin\RefundController;
 use App\Http\Controllers\Admin\SocialMediaLinkController;
 use App\Http\Controllers\Admin\VendorController;
-use App\Http\Controllers\MoneroCheckoutController;\nuse App\Http\Controllers\HealthController;
+use App\Http\Controllers\MoneroCheckoutController;\nuse App\Http\Controllers\HealthController;\nuse App\Http\Controllers\LoginController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\EscrowController;
 use App\Http\Controllers\SiteSettingsController;
@@ -39,7 +39,7 @@ use App\Http\Controllers\VendorRegistrationFeeController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/up', HealthController::class)->name('health');\nRoute::get('/login', fn () => view('admin.auth.login'));
+Route::get('/up', HealthController::class)->name('health');\nRoute::get('/login', LoginController::class);
 Auth::routes();
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
