@@ -10,7 +10,7 @@
         <div class="col-md-4"><div class="card h-100"><div class="card-body"><small class="text-muted">Total wallet balance</small><div class="fs-3 fw-bold">{{ \App\Services\MoneroAmount::fromAtomic(bcadd($wallet->xmr_atomic_available,$wallet->xmr_atomic_locked,0)) }} XMR</div></div></div></div>
     </div>
     <div class="card mb-4"><div class="card-body"><div class="d-flex justify-content-between align-items-center"><h5>Receive Monero</h5>@if($wallet->xmr_deposit_address)<form method="POST" action="{{ route('vendor.wallet.sync') }}">@csrf<button class="btn btn-outline-primary btn-sm">Sync Deposits</button></form>@endif</div>
-        @if($wallet->deposit_address)
+        @if($wallet->xmr_deposit_address)
             <label class="form-label">Your deposit address</label><div class="input-group"><input class="form-control font-monospace" value="{{ $wallet->deposit_address }}" readonly onclick="this.select()"><button class="btn btn-outline-secondary" type="button" onclick="navigator.clipboard.writeText('{{ $wallet->deposit_address }}')">Copy</button></div><div class="form-text">Send XMR to this address, then use Sync Deposits to manually reconcile confirmed transactions.</div>
         @else
             <p class="text-muted">Generate your personal XMR deposit address to receive funds into your marketplace wallet.</p><form method="POST" action="{{ route('vendor.wallet.address') }}">@csrf<button class="btn btn-primary">Generate XMR Deposit Address</button></form>
