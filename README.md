@@ -6,7 +6,7 @@ Kosher Market is a Laravel marketplace for buyers, vendors and administrators. T
 
 ## Payment gateway
 
-SHKeeper is used for Bitcoin invoice creation, payment-address generation, payment callbacks, wallet-address allocation and manually initiated payouts. SHKeeper's documented API provides generated addresses and address transaction lookup in addition to invoice and payout APIs. citeturn0search0turn0search1
+SHKeeper is used for Bitcoin invoice creation, payment-address generation, payment callbacks, wallet-address allocation and manually initiated payouts. SHKeeper's API provides generated addresses and address transaction lookup in addition to invoice and payout APIs.
 
 Configure the SHKeeper wallet for BTC and set the webhook callback URL to:
 
@@ -158,7 +158,7 @@ SHKeeper handles blockchain payment detection and provides payment callbacks. Ko
 
 Escrow release is a marketplace decision. In v3, releasing escrow credits the vendor's internal wallet; it does **not** create an immediate external payout.
 
-Vendor withdrawals create a pending settlement and reserve the requested amount in the vendor wallet. An administrator explicitly submits the withdrawal to SHKeeper. SHKeeper's payout API is asynchronous, so the administrator can subsequently synchronize the payout status. citeturn0search0turn0search1
+Vendor withdrawals create a pending settlement and reserve the requested amount in the vendor wallet. An administrator explicitly submits the withdrawal to SHKeeper. SHKeeper's payout API is asynchronous, so the administrator can subsequently synchronize the payout status.
 
 ## Development checks
 
