@@ -19,7 +19,7 @@ class ReconcileXmrWallets extends Command
             foreach($wallets as $wallet){
                 $credits='0';$holds='0';$reversals='0';$completed='0';
                 foreach($wallet->transactions()->where('status','!=','void')->cursor() as $tx){
-                    $amount=(string)($tx->metadata['atomic_amount']??'0');
+                    $amount=(string)($tx->xmr_atomic_amount??$tx->metadata['atomic_amount']??'0');
                     if(!preg_match('/^\d+$/',$amount))continue;
                     match($tx->type){
                         'deposit','escrow_credit'=> $credits=bcadd($credits,$amount,0),
