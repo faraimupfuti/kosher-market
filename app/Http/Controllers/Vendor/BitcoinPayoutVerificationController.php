@@ -30,7 +30,7 @@ class BitcoinPayoutVerificationController extends Controller
             ->with('success', 'Verification challenge created. Confirm it within 30 minutes.');
     }
 
-    public function confirm(Request $request, BitcoinPayoutAddressVerificationService $service)
+    public function confirm(Request $request, MoneroPayoutAddressVerificationService $service)
     {
         $data = $request->validate([
             'token' => ['required', 'string', 'size:64'],
