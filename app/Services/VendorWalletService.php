@@ -71,7 +71,7 @@ class VendorWalletService
                 if(VendorWalletTransaction::where('reference',$reference)->exists()) return false;
                 $new=MoneroAmount::add((string)$locked->xmr_atomic_available,$atomic);
                 $locked->update(['crypto'=>'XMR','xmr_atomic_available'=>$new]);
-                VendorWalletTransaction::create(['vendor_wallet_id'=>$locked->id,'type'=>'deposit','amount_satoshis'=>0,'balance_after_satoshis'=>0,'reference'=>$reference,'status'=>'posted','txid'=>$txid,'metadata'=>['gateway'=>'shkeeper','crypto'=>'XMR','atomic_amount'=>$atomic,'deposit_address'=>$locked->xmr_deposit_address]]);
+                VendorWalletTransaction::create(['vendor_wallet_id'=>$locked->id,'type'=>'deposit','amount_satoshis'=>0,'balance_after_satoshis'=>0,'reference'=>$reference,'status'=>'posted','txid'=>$txid,'xmr_atomic_amount'=>$atomic,'xmr_atomic_balance_after'=>$new,'metadata'=>['gateway'=>'shkeeper','crypto'=>'XMR','atomic_amount'=>$atomic,'deposit_address'=>$locked->xmr_deposit_address]]);
                 return true;
             });
             if($created)$posted++;
@@ -91,7 +91,7 @@ class VendorWalletService
             $amount=MoneroAmount::toAtomic((string)$escrow->seller_amount);
             $new=MoneroAmount::add((string)$wallet->xmr_atomic_available,$amount);
             $wallet->update(['crypto'=>'XMR','xmr_atomic_available'=>$new]);
-            return VendorWalletTransaction::create(['vendor_wallet_id'=>$wallet->id,'type'=>'escrow_credit','amount_satoshis'=>0,'balance_after_satoshis'=>0,'reference'=>$reference,'status'=>'posted','escrow_transaction_id'=>$escrow->id,'metadata'=>['source'=>'manual_escrow_release','crypto'=>'XMR','atomic_amount'=>$amount]]);
+            return VendorWalletTransaction::create(['vendor_wallet_id'=>$wallet->id,'type'=>'escrow_credit','amount_satoshis'=>0,'balance_after_satoshis'=>0,'reference'=>$reference,'status'=>'posted','escrow_transaction_id'=>$escrow->id,'xmr_atomic_amount'=>$amount,'xmr_atomic_balance_after'=>$new,'metadata'=>['source'=>'manual_escrow_release','crypto'=>'XMR','atomic_amount'=>$amount]]);
         });
     }
 
@@ -109,7 +109,7 @@ class VendorWalletService
             $available=MoneroAmount::sub((string)$wallet->xmr_atomic_available,$amount);
             $locked=MoneroAmount::add((string)$wallet->xmr_atomic_locked,$amount);
             $wallet->update(['crypto'=>'XMR','xmr_atomic_available'=>$available,'xmr_atomic_locked'=>$locked]);
-            VendorWalletTransaction::create(['vendor_wallet_id'=>$wallet->id,'type'=>'withdrawal_hold','amount_satoshis'=>0,'balance_after_satoshis'=>0,'reference'=>'XMR-WITHDRAWAL-HOLD-'.$settlement->id,'status'=>'pending','bitcoin_settlement_id'=>$settlement->id,'metadata'=>['destination'=>$destination,'crypto'=>'XMR','atomic_amount'=>$amount]]);
+            VendorWalletTransaction::create(['vendor_wallet_id'=>$wallet->id,'type'=>'withdrawal_hold','amount_satoshis'=>0,'balance_after_satoshis'=>0,'reference'=>'XMR-WITHDRAWAL-HOLD-'.$settlement->id,'status'=>'pending','bitcoin_settlement_id'=>$settlement->id,'xmr_atomic_amount'=>$amount,'xmr_atomic_balance_after'=>$available,'metadata'=>['destination'=>$destination,'crypto'=>'XMR','atomic_amount'=>$amount]]);
             return $settlement;
         });
     }
@@ -125,7 +125,7 @@ class VendorWalletService
             $available=(string)$wallet->xmr_atomic_available;
             if(!$success)$available=MoneroAmount::add($available,$amount);
             $wallet->update(['xmr_atomic_available'=>$available,'xmr_atomic_locked'=>$locked]);
-            VendorWalletTransaction::create(['vendor_wallet_id'=>$wallet->id,'type'=>$success?'withdrawal_complete':'withdrawal_reversal','amount_satoshis'=>0,'balance_after_satoshis'=>0,'reference'=>$reference,'status'=>$success?'posted':'reversed','bitcoin_settlement_id'=>$settlement->id,'txid'=>$settlement->xmr_txid,'metadata'=>['crypto'=>'XMR','atomic_amount'=>$amount]]);
+            VendorWalletTransaction::create(['vendor_wallet_id'=>$wallet->id,'type'=>$success?'withdrawal_complete':'withdrawal_reversal','amount_satoshis'=>0,'balance_after_satoshis'=>0,'reference'=>$reference,'status'=>$success?'posted':'reversed','bitcoin_settlement_id'=>$settlement->id,'txid'=>$settlement->xmr_txid,'xmr_atomic_amount'=>$amount,'xmr_atomic_balance_after'=>$available,'metadata'=>['crypto'=>'XMR','atomic_amount'=>$amount]]);
         });
     }
 }
