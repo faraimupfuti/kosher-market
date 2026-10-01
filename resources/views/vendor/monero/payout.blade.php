@@ -10,12 +10,12 @@
             <form method="POST" action="{{ route('vendor.monero.payout.update') }}">
                 @csrf @method('PATCH')
                 <label class="form-label">Monero payout address</label>
-                <input name="monero_payout_address" value="{{ old('monero_payout_address', $vendor->monero_payout_address) }}" class="form-control" placeholder="4..." required maxlength="120" autocomplete="off">
+                <input name="xmr_payout_address" value="{{ old('monero_payout_address', $vendor->monero_payout_address) }}" class="form-control" placeholder="4..." required maxlength="120" autocomplete="off">
                 <div class="form-text">Use a Monero mainnet address that you control. Verify every character before saving.</div>
                 <button class="btn btn-primary mt-3">Save Monero Address</button>
             </form>
             <hr>
-            <p><strong>Status:</strong> {{ $vendor->monero_payout_address_verified_at ? 'Verified' : 'Not verified' }}</p>
+            <p><strong>Status:</strong> {{ $vendor->xmr_payout_address_verified_at ? 'Verified' : 'Not verified' }}</p>
         </div>
     </div>
 </div>
