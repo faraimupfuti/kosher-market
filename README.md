@@ -6,7 +6,7 @@ Kosher Market is a Laravel marketplace for buyers, vendors and administrators. T
 
 ## Payment gateway
 
-SHKeeper is used for Bitcoin invoice creation, payment-address generation, payment callbacks and manually initiated payouts.
+SHKeeper is used for Bitcoin invoice creation, payment-address generation, payment callbacks, wallet-address allocation and manually initiated payouts. SHKeeper's documented API provides generated addresses and address transaction lookup in addition to invoice and payout APIs. citeturn0search0turn0search1
 
 Configure the SHKeeper wallet for BTC and set the webhook callback URL to:
 
@@ -14,11 +14,38 @@ Configure the SHKeeper wallet for BTC and set the webhook callback URL to:
 https://YOUR-MARKET-DOMAIN/bitcoin/shkeeper/webhook
 ```
 
-SHKeeper webhook requests are verified using `X-Shkeeper-Timestamp` and `X-Shkeeper-Signature` before a payment is recorded.
+SHKeeper webhook requests are verified before a payment is recorded.
+
+## Vendor wallets
+
+Version 3 introduces an internal BTC wallet for every vendor.
+
+Each vendor wallet has:
+
+- available BTC balance
+- BTC locked in pending withdrawals
+- a SHKeeper-backed BTC deposit address
+- an immutable wallet transaction ledger
+- escrow-credit transactions
+- deposit transactions
+- withdrawal holds, completions and reversals
+
+When an administrator releases a buyer escrow, the vendor's net proceeds are **credited to the vendor's Kosher Market wallet**. The marketplace does not immediately send those funds to an external address.
+
+Vendors can then:
+
+1. Open **Vendor → Bitcoin Wallet**.
+2. Generate their BTC deposit address if they want to deposit BTC directly.
+3. Manually synchronize confirmed deposits from SHKeeper.
+4. Configure and verify a Bitcoin withdrawal address.
+5. Request a withdrawal from their available wallet balance.
+6. Wait for administrator review and manual SHKeeper payout submission.
+
+Wallet deposits are intentionally synchronized manually rather than by a scheduler, consistent with the project's manual-operation requirement.
 
 ## Operating model
 
-The marketplace does not run settlement, escrow-release or reconciliation schedules automatically.
+The marketplace does not run settlement, escrow-release or wallet-reconciliation schedules automatically.
 
 - No Laravel scheduler service is started by Docker Compose.
 - No background queue worker is started by Docker Compose.
@@ -27,23 +54,8 @@ The marketplace does not run settlement, escrow-release or reconciliation schedu
 - `BITCOIN_AUTO_PAYOUTS=false`.
 - Containers use `restart: "no"`.
 - Escrow release and cryptocurrency payouts require explicit administrator action.
+- Vendor wallet deposit synchronization requires an explicit vendor action.
 - Database migrations are run manually.
-
-The underlying Artisan commands remain available for explicit operator use:
-
-```bash
-docker compose exec app php artisan escrow:release-eligible
-docker compose exec app php artisan bitcoin:settlements-sync
-docker compose exec app php artisan bitcoin:reconcile-payouts --limit=25
-```
-
-## Technology
-
-- Laravel / PHP 8.3
-- Blade, Vite, JavaScript and Sass
-- MySQL 8
-- SHKeeper
-- Docker and Docker Compose
 
 ## Docker setup
 
@@ -110,26 +122,43 @@ docker compose logs -f app
 docker compose down
 ```
 
+## Wallet and escrow flow
+
+```text
+Buyer
+  │
+  │ BTC payment
+  ▼
+SHKeeper invoice
+  │
+  ▼
+Kosher Market escrow
+  │
+  │ Administrator releases order
+  ▼
+Vendor Kosher Market Wallet
+  │
+  │ Vendor requests withdrawal
+  ▼
+Admin reviews withdrawal
+  │
+  │ Admin submits payout
+  ▼
+SHKeeper
+  │
+  ▼
+Vendor's verified external BTC address
+```
+
+Kosher Market does **not** store Bitcoin private keys or seed phrases. The vendor wallet in the application is an internal ledger backed by the configured SHKeeper wallet infrastructure. The application never asks a vendor for a seed phrase or private key.
+
 ## Manual Bitcoin operations
 
-SHKeeper handles blockchain payment detection and provides payment callbacks. Kosher Market records the callback only after signature validation and payment checks.
+SHKeeper handles blockchain payment detection and provides payment callbacks. Kosher Market records payment only after validation and idempotency checks.
 
-Escrow release remains a marketplace decision. Releasing an escrow creates a pending seller settlement; it does **not** automatically submit the payout to SHKeeper.
+Escrow release is a marketplace decision. In v3, releasing escrow credits the vendor's internal wallet; it does **not** create an immediate external payout.
 
-An administrator can explicitly submit a settlement through the existing admin settlement interface or manually invoke the settlement command. SHKeeper's payout API uses HTTP Basic authentication and returns an asynchronous payout task that can subsequently be checked.
-
-Useful commands:
-
-```bash
-# Review and release eligible escrow records
-docker compose exec app php artisan escrow:release-eligible
-
-# Manually submit/synchronize settlements
-docker compose exec app php artisan bitcoin:settlements-sync
-
-# Manually reconcile a bounded number of payout records
-docker compose exec app php artisan bitcoin:reconcile-payouts --limit=25
-```
+Vendor withdrawals create a pending settlement and reserve the requested amount in the vendor wallet. An administrator explicitly submits the withdrawal to SHKeeper. SHKeeper's payout API is asynchronous, so the administrator can subsequently synchronize the payout status. citeturn0search0turn0search1
 
 ## Development checks
 
@@ -146,4 +175,4 @@ docker compose up -d
 
 ## Production safety
 
-Before accepting real Bitcoin, independently test invoice creation, webhook signature verification, replay protection, idempotency, partial/overpayment handling, confirmation policy, escrow transitions, vendor payout-address verification, payout failures, refunds, disputes, backups and recovery procedures.
+Before accepting real Bitcoin, independently test invoice creation, webhook signature verification, replay protection, idempotency, partial/overpayment handling, confirmation policy, escrow transitions, wallet deposit reconciliation, wallet accounting, withdrawal reservation/reversal, payout failures, refunds, disputes, backups and recovery procedures.
