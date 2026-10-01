@@ -16,7 +16,7 @@ class BitcoinPayoutVerificationController extends Controller
         return view('vendor.monero.verify-payout', compact('vendor'));
     }
 
-    public function requestVerification(Request $request, BitcoinPayoutAddressVerificationService $service)
+    public function requestVerification(Request $request, MoneroPayoutAddressVerificationService $service)
     {
         $vendor = Auth::guard('vendor')->user();
 
@@ -39,6 +39,6 @@ class BitcoinPayoutVerificationController extends Controller
         $vendor = Auth::guard('vendor')->user();
         $service->confirm($vendor, $data['token']);
 
-        return back()->with('success', 'Bitcoin payout address verified. withdrawals require administrator approval for this address.');
+        return back()->with('success', 'Monero payout address verified. Withdrawals require administrator approval for this address.');
     }
 }
