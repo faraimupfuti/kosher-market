@@ -80,7 +80,7 @@ def create_order(request):
                 order=order, product=item.product, product_title=item.product.title,
                 vendor_name=item.product.vendor.store_name, unit_price_usd=price,
                 commission_rate=commission, vendor_earning_usd=vendor_earning,
-                product_version=latest.version if latest else "",
+                product_version=latest.version if latest else "", quantity=item.quantity,
             )
         order.subtotal_usd = subtotal
         order.save(update_fields=["subtotal_usd"])
