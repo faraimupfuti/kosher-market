@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Kosher Market — Software without borders</title></head>
-<body><header><a href="/">Kosher Market</a><nav><a href="/admin/">Vendor / Admin</a></nav></header>
-<main><h1>Software without borders.</h1><p>Discover tools, developer products and digital software from independent creators.</p>
+<body><header><a href="/">Kosher Market</a><nav><a href="{% url 'cart_detail' %}">Cart</a> {% if user.is_authenticated %}<span>{{ user.email }}</span><form method="post" action="{% url 'logout' %}" style="display:inline">{% csrf_token %}<button type="submit">Sign out</button></form>{% else %}<a href="{% url 'login' %}">Sign in</a> <a href="{% url 'register' %}">Create account</a>{% endif %}</nav></header>
+<main><h1>Software without borders.</h1><p>Discover developer tools, automation software, AI products and digital tools from independent creators.</p>
 <section>{% for product in products %}<article><p>{{ product.category.name }}</p><h2><a href="{% url 'product_detail' product.slug %}">{{ product.title }}</a></h2><p>{{ product.summary }}</p><p>US$ {{ product.price_usd }}</p><small>By {{ product.vendor.store_name }}</small></article>{% empty %}<p>Our catalogue is being prepared. Check back soon.</p>{% endfor %}</section>
 </main></body></html>
