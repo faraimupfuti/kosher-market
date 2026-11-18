@@ -126,6 +126,7 @@ class OrderItem(models.Model):
     commission_rate = models.DecimalField(max_digits=5, decimal_places=4, default=Decimal("0.1000"))
     vendor_earning_usd = models.DecimalField(max_digits=10, decimal_places=2)
     product_version = models.CharField(max_length=40, blank=True)
+    quantity = models.PositiveSmallIntegerField(default=1, validators=[MinValueValidator(1)])
 
 
 class PaymentAttempt(models.Model):
